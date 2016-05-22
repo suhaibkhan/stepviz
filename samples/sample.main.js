@@ -1,16 +1,3 @@
-/*!
- * stepviz 0.1.0 (22-05-2016)
- * https://github.com/suhaibkhan/stepviz
- * MIT licensed
-
- * Copyright (C) 2016 Suhaib Khan, http://suhaibkhan.github.io
- */
-/*!
- * stepviz 0.1.0 (22-05-2016)
- * https://github.com/suhaibkhan/stepviz
- * MIT licensed
- * Copyright (C) 2016 Suhaib Khan, http://suhaibkhan.github.io
- */
 (function() {
 
   function init() {
@@ -20,7 +7,7 @@
       rawArray.push([i, i * 34]);
     }
 
-    var rawArrlayout = vizContainer.layout({
+    var rawArrlayout = vizContainer.createLayout({
       width: '50px'
     });
     var rawArrayComp = vizContainer.drawArray(
@@ -34,17 +21,21 @@
 
     setTimeout(function() {
       rawArrayComp.highlight([2, 5]);
-      rawArrayComp.swap(2, 5);
+      // rawArrayComp.swap(2, 5);
     }, 1000);
 
     setTimeout(function() {
       rawArrayComp.unhighlight([2, 5]);
       var clone = rawArrayComp.clone();
-      clone.move(80, 0);
+      clone.translate(80, 0).then(function(){
+        alert('ok');
+      });
     }, 4000);
 
     // var comArrLayout = vizContainer.layout({left: '50%', height: '5%'});
     // var comArrayComp = vizContainer.drawArray(rawArray, comArrLayout);
+
+    console.log(vizContainer);
 
     window.onresize = function() {
       vizContainer.redraw();

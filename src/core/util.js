@@ -14,25 +14,31 @@
     return props;
   };
 
-  ns.util.objClone = function(obj){
+  ns.util.objClone = function(obj) {
     var cloneObj = null;
 
-    if (Array.isArray(obj)){
+    if (Array.isArray(obj)) {
       cloneObj = [];
-      for (var i = 0; i < obj.length; i++){
+      for (var i = 0; i < obj.length; i++) {
         cloneObj.push(ns.util.objClone(obj[i]));
       }
-    }else if (typeof obj == 'object'){
+    } else if (typeof obj == 'object') {
       cloneObj = {};
       for (var prop in obj) {
-        if (obj.hasOwnProperty(prop)){
+        if (obj.hasOwnProperty(prop)) {
           cloneObj[prop] = ns.util.objClone(obj[prop]);
         }
       }
-    }else{
+    } else {
       cloneObj = obj;
     }
     return cloneObj;
+  };
+
+  ns.util.createTaskForPromise = function(fn, context, args) {
+    return function() {
+      return fn.apply(context, args);
+    };
   };
 
 }(window.stepViz));

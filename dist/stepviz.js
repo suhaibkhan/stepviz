@@ -1,28 +1,16 @@
 /*!
- * stepviz 0.1.0 (22-05-2016)
+ * stepviz 0.1.0 (23-05-2016)
  * https://github.com/suhaibkhan/stepviz
  * MIT licensed
 
  * Copyright (C) 2016 Suhaib Khan, http://suhaibkhan.github.io
  */
-if (!String.prototype.endsWith) {
-  String.prototype.endsWith = function(searchString, position) {
-    var subjectString = this.toString();
-    if (typeof position !== 'number' || !isFinite(position) ||
-      Math.floor(position) !== position || position > subjectString.length) {
-      position = subjectString.length;
-    }
-    position -= searchString.length;
-    var lastIndex = subjectString.indexOf(searchString, position);
-    return lastIndex !== -1 && lastIndex === position;
-  };
-}
-
 
 (function() {
 
   'use strict';
 
+  // check for dependencies
   if (typeof window.d3 === 'undefined') {
     throw 'd3 library not found.';
   }
@@ -31,93 +19,34 @@ if (!String.prototype.endsWith) {
   var ns = {};
   ns.components = {};
   ns.constants = {};
-  ns.config = {};
-
-  // default config
-  ns.config.cssClass = 'stepViz';
-  ns.config.highlightClass = 'highlight';
-
-  ns.init = function(container, props) {
-    return new ns.Board(container, props);
-  };
 
   // set as global
   window.stepViz = ns;
 
 }());
 
-(function(ns, d3) {
+(function(ns) {
 
   'use strict';
 
-  ns.Board = function(container, props) {
-    if (typeof container === 'string') {
-      container = document.getElementById(container);
-    } else if (!(container instanceof HTMLElement)) {
-      throw 'Invalid container';
-    }
+  ns.config = {};
 
-    this._container = container;
-    this._props = ns.util.defaults(props, {
-      margin: {
-        top: 10,
-        left: 10,
-        bottom: 10,
-        right: 10
-      }
-    });
+  // default config
+  ns.config.themeCSSClass = 'default';
+  ns.config.highlightCSSClass = 'highlight';
+  ns.config.defaultFontSize = '12px';
 
-    var margin = this._props.margin;
-    this._width = this._container.offsetWidth - margin.left - margin.right;
-    this._height = this._container.offsetHeight - margin.top - margin.bottom;
+}(window.stepViz));
 
-    this._svg = d3.select(this._container)
-      .append('svg')
-      .attr('width', this._width + margin.left + margin.right)
-      .attr('height', this._height + margin.top + margin.bottom)
-      .append('g')
-      .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+(function(ns) {
 
-    this._components = [];
+  'use strict';
 
+  ns.init = function(container, props) {
+    return new ns.components.Board(container, props);
   };
 
-  ns.Board.prototype.redraw = function() {
-
-    var margin = this._props.margin;
-    this._width = this._container.offsetWidth - margin.left - margin.right;
-    this._height = this._container.offsetHeight - margin.top - margin.bottom;
-
-    var svgParent = d3.select(this._svg.node().parentNode);
-    svgParent
-      .attr('width', this._width + margin.left + margin.right)
-      .attr('height', this._height + margin.top + margin.bottom);
-
-    for (var i = 0; i < this._components.length; i++) {
-      this._components[i].redraw();
-    }
-
-  };
-
-  ns.Board.prototype.size = function() {
-    return {
-      width: this._width,
-      height: this._height
-    };
-  };
-
-  ns.Board.prototype.drawArray = function(array, layout, props) {
-    var arrayComp = new ns.components.Array(this, array, layout, props);
-    this._components.push(arrayComp);
-    return arrayComp;
-  };
-
-  ns.Board.prototype.layout = function(box, margin) {
-    var layout = new ns.Layout(this, box, margin);
-    return layout;
-  };
-
-}(window.stepViz, window.d3));
+}(window.stepViz));
 
 (function(ns) {
 
@@ -138,48 +67,66 @@ if (!String.prototype.endsWith) {
     return retVal;
   }
 
-  ns.Layout = function(board, box, margin) {
-
-    this._board = board;
+  ns.Layout = function(parent, box, margin) {
+    this._parent = parent;
 
     // defaults
-    this._box = ns.util.defaults(box, {
+    this._box = {
       top: 0,
       left: 0,
       width: 'auto',
       height: 'auto'
-    });
+    };
 
-    this._margin = ns.util.defaults(margin, {
+    this._margin = {
       top: 0,
       left: 0,
       bottom: 0,
       right: 0
-    });
+    };
 
-    this.reCalculate();
-
+    this.setBox(box, margin);
   };
 
   ns.Layout.prototype.reCalculate = function() {
-    var boardSize = this._board.size();
+
+    var parentSize = {
+      width: 0,
+      height: 0
+    };
+    if (this._parent instanceof HTMLElement) {
+      parentSize.width = this._parent.offsetWidth;
+      parentSize.height = this._parent.offsetHeight;
+    } else if (typeof this._parent.getLayout == 'function') {
+      var parentBounds = this._parent.getLayout().getBounds();
+      parentSize.width = parentBounds.width;
+      parentSize.height = parentBounds.height;
+    } else {
+      throw 'Invalid parent';
+    }
 
     // calculate bounds
-    this._top = parseAndCalc(this._box.top, boardSize.height);
-    this._left = parseAndCalc(this._box.left, boardSize.width);
+    this._top = parseAndCalc(this._box.top, parentSize.height);
+    this._left = parseAndCalc(this._box.left, parentSize.width);
     if (this._box.width == 'auto') {
       // use remaining width
-      this._width = boardSize.width - this._left;
+      this._width = parentSize.width - this._left;
     } else {
-      this._width = parseAndCalc(this._box.width, boardSize.width);
+      this._width = parseAndCalc(this._box.width, parentSize.width);
     }
     if (this._box.height == 'auto') {
       // use remaining height
-      this._height = boardSize.height - this._top;
+      this._height = parentSize.height - this._top;
     } else {
-      this._height = parseAndCalc(this._box.height, boardSize.height);
+      this._height = parseAndCalc(this._box.height, parentSize.height);
     }
-    
+
+  };
+
+  ns.Layout.prototype.setBox = function(box, margin) {
+    this._box = ns.util.defaults(box, this._box);
+    this._margin = ns.util.defaults(margin, this._margin);
+    this.reCalculate();
   };
 
   ns.Layout.prototype.getBounds = function() {
@@ -200,13 +147,18 @@ if (!String.prototype.endsWith) {
     };
   };
 
+  ns.Layout.prototype.moveTo = function(x, y) {
+    this._top = y;
+    this._left = x;
+  };
+
   ns.Layout.prototype.translate = function(x, y) {
     this._top += y;
     this._left += x;
   };
 
   ns.Layout.prototype.clone = function() {
-    return new ns.Layout(this._board, ns.util.objClone(this._box),
+    return new ns.Layout(this._parent, ns.util.objClone(this._box),
       ns.util.objClone(this._margin));
   };
 
@@ -228,25 +180,31 @@ if (!String.prototype.endsWith) {
     return props;
   };
 
-  ns.util.objClone = function(obj){
+  ns.util.objClone = function(obj) {
     var cloneObj = null;
 
-    if (Array.isArray(obj)){
+    if (Array.isArray(obj)) {
       cloneObj = [];
-      for (var i = 0; i < obj.length; i++){
+      for (var i = 0; i < obj.length; i++) {
         cloneObj.push(ns.util.objClone(obj[i]));
       }
-    }else if (typeof obj == 'object'){
+    } else if (typeof obj == 'object') {
       cloneObj = {};
       for (var prop in obj) {
-        if (obj.hasOwnProperty(prop)){
+        if (obj.hasOwnProperty(prop)) {
           cloneObj[prop] = ns.util.objClone(obj[prop]);
         }
       }
-    }else{
+    } else {
       cloneObj = obj;
     }
     return cloneObj;
+  };
+
+  ns.util.createTaskForPromise = function(fn, context, args) {
+    return function() {
+      return fn.apply(context, args);
+    };
   };
 
 }(window.stepViz));
@@ -255,6 +213,8 @@ if (!String.prototype.endsWith) {
 
   'use strict';
 
+  ns.constants.ARRAY_CSS_CLASS = 'array';
+
   ns.constants.ARRAY_HORZ_DIR = 'horizontal';
   ns.constants.ARRAY_VERT_DIR = 'vertical';
 
@@ -262,61 +222,57 @@ if (!String.prototype.endsWith) {
   ns.constants.ARRAY_ANIM_SWAP_PATH_BEFORE = 'before';
   ns.constants.ARRAY_ANIM_SWAP_PATH_NONE = 'none';
 
-  function drawSVGArray(svgElem, state, compBox, props) {
+  ns.constants.ARRAY_PROP_LIST = ['dir', 'fontSize', 'renderer'];
 
-    var direction = props.dir;
-    var fontSize = props.fontSize;
-    var renderer = props.renderer;
+  function drawArray(component, state) {
+    var direction = state.dir;
+    var compBox = state.layout.getBox();
+    var array = state.value;
 
-    // draw rectangles
+    var props = {};
+    ns.constants.ARRAYITEM_PROP_LIST.forEach(function(propKey){
+      props[propKey] = state[propKey];
+    });
+
+    var itemSize = 0;
+    if (direction == ns.constants.ARRAY_VERT_DIR) {
+      itemSize = Math.floor(compBox.height / array.length);
+    } else {
+      itemSize = Math.floor(compBox.width / array.length);
+    }
     var x = 0;
     var y = 0;
-    var interval = 0;
-    if (direction == ns.constants.ARRAY_VERT_DIR) {
-      interval = Math.floor(compBox.height / state.length);
-    } else {
-      interval = Math.floor(compBox.width / state.length);
-    }
 
-    for (var i = 0; i < state.length; i++) {
-
-      var elemGroup = svgElem.append('g')
-        .attr('transform', 'translate(' + x + ',' + y + ')');
-
-      var rect = elemGroup.append('rect')
-        .attr('x', 0)
-        .attr('y', 0);
+    for (var i = 0; i < array.length; i++) {
+      // create array item component
+      var itemBox = {
+        top: y,
+        left: x,
+        width: 0,
+        height: 0
+      };
 
       if (direction == ns.constants.ARRAY_VERT_DIR) {
-        rect.attr('width', compBox.width)
-          .attr('height', interval);
-        y += interval;
+        itemBox.width = compBox.width;
+        itemBox.height = itemSize;
+        y += itemSize;
       } else {
-        rect.attr('height', compBox.height)
-          .attr('width', interval);
-        x += interval;
+        itemBox.width = itemSize;
+        itemBox.height = compBox.height;
+        x += itemSize;
       }
 
-      var text = elemGroup.append('text')
-        .text(renderer(state[i].value))
-        .attr('x', 0)
-        .attr('y', 0)
-        .style('font-size', fontSize);
-
-      // align text in center of rect
-      var rectBBox = rect.node().getBBox();
-      var textBBox = text.node().getBBox();
-
-      text.attr('dx', (rectBBox.width - textBBox.width) / 2);
-      text.attr('dy', (rectBBox.height - textBBox.height) / 2);
-
-      state[i].elem = elemGroup;
+      if (state.children.length > i) {
+        state.children[i].updateLayout(itemBox);
+      } else {
+        var itemLayout = component.createLayout(itemBox);
+        component.drawArrayItem(array[i], itemLayout, ns.util.objClone(props));
+      }
     }
+
   }
 
-  ns.components.Array = function(board, array, layout, props) {
-
-    this._board = board;
+  ns.components.Array = function(parent, array, layout, props) {
 
     if (!Array.isArray(array)) {
       throw 'Invalid array';
@@ -328,50 +284,65 @@ if (!String.prototype.endsWith) {
 
     if (!layout) {
       throw 'Invalid layout';
-    } else {
-      this._layout = layout;
     }
 
-    this._props = ns.util.defaults(props, {
+    this._state = ns.util.defaults(props, {
       dir: ns.constants.ARRAY_HORZ_DIR,
-      fontSize: '12px',
+      fontSize: ns.config.defaultFontSize,
       renderer: function(d) {
-        return d;
+        if (d === null) {
+          return '';
+        } else {
+          return JSON.stringify(d);
+        }
       }
     });
 
-    var compBox = this._layout.getBox();
+    this._state.value = array;
 
-    this._svgElem = this._board._svg.append('g')
-      .attr('class', ns.config.cssClass + ' array')
+    this._state.layout = layout;
+    var compBox = layout.getBox();
+
+    this._state.parent = parent;
+
+    this._state.svgElem = parent.svg().append('g')
+      .attr('class', ns.constants.ARRAY_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
 
-    this._state = [];
-    for (var i = 0; i < array.length; i++) {
-      this._state.push({
-        value: array[i]
-      });
-    }
+    this._state.children = [];
 
     // draw
-    drawSVGArray(this._svgElem, this._state, compBox, this._props);
+    drawArray(this, this._state);
 
+  };
+
+  ns.components.Array.prototype.createLayout = function(box, margin){
+    return new ns.Layout(this, box, margin);
+  };
+
+  ns.components.Array.prototype.drawArrayItem = function(value, layout, props) {
+    var arrayItemComp = new ns.components.ArrayItem(this, value, layout, props);
+    this._state.children.push(arrayItemComp);
+    return arrayItemComp;
   };
 
   ns.components.Array.prototype.redraw = function() {
-    // clear existing
-    for (var i = 0; i < this._state.length; i++) {
-      this._state[i].elem = null;
-    }
-    this._svgElem.selectAll('*').remove();
     // recalculate layout
-    this._layout.reCalculate();
+    this._state.layout.reCalculate();
     // draw
-    drawSVGArray(this._svgElem, this._state, this._layout.getBox(), this._props);
+    drawArray(this, this._state);
+  };
+
+  ns.components.Array.prototype.svg = function() {
+    return this._state.svgElem;
   };
 
   ns.components.Array.prototype.getLayout = function() {
-    return this._layout;
+    return this._state.layout;
+  };
+
+  ns.components.Array.prototype.updateLayout = function(box, margin) {
+    return this._state.layout.setBox(box, margin);
   };
 
   ns.components.Array.prototype.highlight = function(arrayIndices, props) {
@@ -384,15 +355,10 @@ if (!String.prototype.endsWith) {
       throw 'Invalid argument to highlight.';
     }
 
-    props = ns.util.defaults(props, {
-      highlightClass: ns.config.highlightClass
-    });
-
     for (var i = 0; i < arrayIndices.length; i++) {
       var index = arrayIndices[i];
-      if (index > -1 && index < this._state.length) {
-        this._state[index].highlight = true;
-        this._state[index].elem.attr('class', props.highlightClass);
+      if (index > -1 && index < this._state.children.length) {
+        this._state.children[index].highlight(props);
       }
     }
   };
@@ -409,40 +375,46 @@ if (!String.prototype.endsWith) {
 
     for (var i = 0; i < arrayIndices.length; i++) {
       var index = arrayIndices[i];
-      if (index > -1 && index < this._state.length) {
-        this._state[index].highlight = false;
-        this._state[index].elem.attr('class', null);
+      if (index > -1 && index < this._state.children.length) {
+        this._state.children[index].unhighlight();
       }
     }
   };
 
-  ns.components.Array.prototype.move = function(x, y, animate) {
-    // animate by default
-    if (animate !== false) animate = true;
+  ns.components.Array.prototype.translate = function(x, y, animate) {
+    var that = this;
+    return new Promise(function(resolve, reject) {
+      // animate by default
+      if (animate !== false) animate = true;
+      // update layout
+      that._state.layout.translate(x, y);
 
-    var arrCompTransform = d3.transform(this._svgElem.transition().attr('transform'));
-    // change translate transform
-    arrCompTransform.translate = [arrCompTransform.translate[0] + x,
-      arrCompTransform.translate[1] + y
-    ];
-    // update
-    this._layout.translate(x, y);
-    var elem = this._svgElem;
-    if (animate) {
-      elem = elem.transition();
-    }
-    elem.attr('transform', arrCompTransform);
+      var elem = that._state.svgElem;
+      var transform = d3.transform(elem.attr('transform'));
+      // add to existing translate
+      transform.translate = [transform.translate[0] + x, transform.translate[1] + y];
+      if (animate) {
+        elem.transition().attr('transform', transform.toString()).each('end', resolve);
+      } else {
+        elem.attr('transform', transform.toString());
+        resolve();
+      }
+    });
   };
 
   ns.components.Array.prototype.clone = function() {
-    // create a clone of underlying array
-    var array = [];
-    for (var i = 0; i < this._state.length; i++) {
-      array.push(this._state[i].value);
+    var state = this._state;
+
+    var props = {};
+    var discardProps = ['value', 'layout', 'parent', 'svgElem', 'children'];
+    for (var prop in state) {
+      if (state.hasOwnProperty(prop) && discardProps.indexOf(prop) == -1) {
+        props[prop] = ns.util.objClone(state[prop]);
+      }
     }
 
-    return this._board.drawArray(array,
-      this._layout.clone(), ns.util.objClone(this._props));
+    return state.parent.drawArray(ns.util.objClone(state.value),
+      state.layout.clone(), props);
   };
 
   // TODO
@@ -489,3 +461,329 @@ if (!String.prototype.endsWith) {
   };
 
 }(window.stepViz, window.d3));
+
+(function(ns, d3) {
+
+  'use strict';
+
+  // constants
+  ns.constants.ARRAYITEM_CSS_CLASS = 'arrayItem';
+  ns.constants.ARRAYITEM_PROP_LIST = ['fontSize', 'renderer'];
+
+  function drawArrayItem(state) {
+
+    var svgElem = state.svgElem;
+    var compBox = state.layout.getBox();
+    var value = state.value;
+    var renderer = state.renderer;
+    var fontSize = state.fontSize;
+
+    // draw item
+    var rectElem = svgElem.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', compBox.width)
+      .attr('height', compBox.height);
+
+    var textElem = svgElem.append('text')
+      .text(renderer(value))
+      .attr('x', 0)
+      .attr('y', 0)
+      .style('font-size', fontSize);
+
+    // align text in center of rect
+    var rectBBox = rectElem.node().getBBox();
+    var textBBox = textElem.node().getBBox();
+
+    textElem.attr('dx', (rectBBox.width - textBBox.width) / 2);
+    textElem.attr('dy', (rectBBox.height - textBBox.height) / 2);
+
+    // highlight
+    toggleHighlight(state);
+
+  }
+
+  function toggleHighlight(state, props) {
+
+    props = props || {};
+
+    var svgElem = state.svgElem;
+    var elemClass = svgElem.attr('class');
+
+    // highlight if needed
+    if (state.highlight) {
+      if (elemClass.indexOf(ns.config.highlightCSSClass) == -1) {
+        elemClass += ' ' + ns.config.highlightCSSClass;
+      }
+      // custom style for highlighting
+      for (var prop in props) {
+        if (props.hasOwnProperty(prop)) {
+          if (prop.startsWith('rect-')) {
+            svgElem.select('rect').style(prop.substring(5), props[prop]);
+          } else if (prop.startsWith('text-')) {
+            svgElem.select('text').style(prop.substring(5), props[prop]);
+          }
+        }
+      }
+    } else {
+      elemClass = elemClass.replace(ns.config.highlightCSSClass, '');
+      // remove custom highlighting
+      // svgElem.select('rect').attr('style', null);
+      //svgElem.select('text').attr('style', null);
+    }
+    svgElem.attr('class', elemClass);
+  }
+
+  ns.components.ArrayItem = function(parent, value, layout, props) {
+
+    if (typeof value == 'undefined') {
+      throw 'Invalid value';
+    }
+
+    if (!layout) {
+      throw 'Invalid layout';
+    }
+
+    this._state = ns.util.defaults(props, {
+      fontSize: ns.config.defaultFontSize,
+      renderer: function(d) {
+        if (d === null) {
+          return '';
+        } else {
+          return JSON.stringify(d);
+        }
+      }
+    });
+
+    this._state.value = value;
+
+    this._state.layout = layout;
+    var compBox = layout.getBox();
+
+    this._state.parent = parent;
+
+    this._state.svgElem = parent.svg().append('g')
+      .attr('class', ns.constants.ARRAYITEM_CSS_CLASS)
+      .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+
+    // draw
+    drawArrayItem(this._state);
+  };
+
+  ns.components.ArrayItem.prototype.redraw = function() {
+
+    if (!this._state || !this._state.svgElem) {
+      throw 'ArrayItem redraw error - Invalid state or SVG';
+    }
+
+    // clear existing
+    this._state.svgElem.selectAll('*').remove();
+    // recalculate layout
+    this._state.layout.reCalculate();
+    // draw
+    drawArrayItem(this._state);
+  };
+
+  ns.components.ArrayItem.prototype.svg = function() {
+    return this._state.svgElem;
+  };
+
+  ns.components.ArrayItem.prototype.getLayout = function() {
+    return this._state.layout;
+  };
+
+  ns.components.ArrayItem.prototype.updateLayout = function(box, margin) {
+    return this._state.layout.setBox(box, margin);
+  };
+
+  ns.components.ArrayItem.prototype.highlight = function(props) {
+    this._state.highlight = true;
+    toggleHighlight(this._state, props);
+  };
+
+  ns.components.ArrayItem.prototype.unhighlight = function() {
+    this._state.highlight = false;
+    toggleHighlight(this._state);
+  };
+
+  ns.components.ArrayItem.prototype.translate = function(x, y, animate) {
+    var that = this;
+    return new Promise(function(resolve, reject) {
+      // animate by default
+      if (animate !== false) animate = true;
+      // update layout
+      that._state.layout.translate(x, y);
+
+      var elem = that._state.svgElem;
+      var transform = d3.transform(elem.attr('transform'));
+      // add to existing translate
+      transform.translate = [transform.translate[0] + x, transform.translate[1] + y];
+      if (animate) {
+        elem.transition().attr('transform', transform.toString()).each('end', resolve);
+      } else {
+        elem.attr('transform', transform.toString());
+        resolve();
+      }
+    });
+  };
+
+  ns.components.ArrayItem.prototype.moveTo = function(x, y, animate) {
+    var that = this;
+    return new Promise(function(resolve, reject) {
+      // animate by default
+      if (animate !== false) animate = true;
+      // update layout
+      that._state.layout.moveTo(x, y);
+
+      var elem = that._state.svgElem;
+      var transform = d3.transform(elem.attr('transform'));
+      // new translate
+      transform.translate = [x, y];
+      if (animate) {
+        elem.transition().attr('transform', transform.toString()).each('end', resolve);
+      } else {
+        elem.attr('transform', transform.toString());
+        resolve();
+      }
+    });
+  };
+
+  ns.components.ArrayItem.prototype.moveThroughPath = function(path) {
+
+    var animTasks = [];
+
+    if (typeof path != 'string') {
+      throw 'Invalid path';
+    }
+
+    var pathCoords = path.split(' ');
+
+    for (var i = 0; i < pathCoords.length; i++) {
+      var coordStr = pathCoords[i];
+      var coordStrFirstChar = coordStr.charAt(0);
+      var animate = true;
+      if (coordStrFirstChar == 'M' || coordStrFirstChar == 'L' ||
+        (coordStrFirstChar >= '0' && coordStrFirstChar <= '9')) {
+
+        animate = coordStrFirstChar == 'M' ? false : true;
+        if (coordStrFirstChar == 'M' || coordStrFirstChar == 'L') {
+          coordStr = coordStr.substring(1);
+        }
+
+        var coords = coordStr.split(',').map(parseFloat);
+        if (coords.length == 2) {
+          var task = ns.util.createTaskForPromise(
+            this.moveTo, this, [coords[0], coords[1], animate]);
+          animTasks.push(task);
+        }
+      }
+    }
+
+    return animTasks.reduce(function(prevTask, nextTask) {
+      return promise.then(nextTask);
+    }, Promise.resolve());
+
+  };
+
+}(window.stepViz, window.d3));
+
+(function(ns, d3) {
+
+  'use strict';
+
+  ns.constants.MAIN_CSS_CLASS = 'stepViz';
+  ns.constants.BOARD_PROP_LIST = ['margin'];
+
+  ns.components.Board = function(container, props) {
+    if (typeof container === 'string') {
+      container = document.getElementById(container);
+    } else if (!(container instanceof HTMLElement)) {
+      throw 'Invalid container';
+    }
+
+    this._state = ns.util.defaults(props, {
+      margin: {
+        top: 10,
+        left: 10,
+        bottom: 10,
+        right: 10
+      }
+    });
+
+    // generate layout to fill board in container
+    this._state.layout = new ns.Layout(container, {}, this._state.margin);
+
+    // no parent for Board
+    this._state.parent = null;
+
+    var compBounds = this._state.layout.getBounds();
+    var compBox = this._state.layout.getBox();
+
+    this._state.svgElem = d3.select(container)
+      .append('svg')
+      .attr('width', compBounds.width)
+      .attr('height', compBounds.height)
+      .append('g')
+      .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')')
+      .attr('class', ns.constants.MAIN_CSS_CLASS + ' ' + ns.config.themeCSSClass);
+
+    this._state.children = [];
+
+  };
+
+  ns.components.Board.prototype.redraw = function() {
+
+    // recalculate layout
+    this._state.layout.reCalculate();
+    // update
+    var compBounds = this._state.layout.getBounds();
+    var svgRoot = d3.select(this._state.svgElem.node().parentNode);
+    svgRoot.attr('width', compBounds.width)
+      .attr('height', compBounds.height);
+
+    for (var i = 0; i < this._state.children.length; i++) {
+      this._state.children[i].redraw();
+    }
+
+  };
+
+  ns.components.Board.prototype.svg = function(){
+    return this._state.svgElem;
+  };
+
+  ns.components.Board.prototype.getLayout = function() {
+    return this._state.layout;
+  };
+
+  ns.components.Board.prototype.drawArray = function(array, layout, props) {
+    var arrayComp = new ns.components.Array(this, array, layout, props);
+    this._state.children.push(arrayComp);
+    return arrayComp;
+  };
+
+  ns.components.Board.prototype.createLayout = function(box, margin) {
+    return new ns.Layout(this, box, margin);
+  };
+
+}(window.stepViz, window.d3));
+
+
+if (!String.prototype.startsWith) {
+    String.prototype.startsWith = function(searchString, position){
+      position = position || 0;
+      return this.substr(position, searchString.length) === searchString;
+  };
+}
+
+if (!String.prototype.endsWith) {
+  String.prototype.endsWith = function(searchString, position) {
+    var subjectString = this.toString();
+    if (typeof position !== 'number' || !isFinite(position) ||
+      Math.floor(position) !== position || position > subjectString.length) {
+      position = subjectString.length;
+    }
+    position -= searchString.length;
+    var lastIndex = subjectString.indexOf(searchString, position);
+    return lastIndex !== -1 && lastIndex === position;
+  };
+}

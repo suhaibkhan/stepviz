@@ -17,48 +17,66 @@
     return retVal;
   }
 
-  ns.Layout = function(board, box, margin) {
-
-    this._board = board;
+  ns.Layout = function(parent, box, margin) {
+    this._parent = parent;
 
     // defaults
-    this._box = ns.util.defaults(box, {
+    this._box = {
       top: 0,
       left: 0,
       width: 'auto',
       height: 'auto'
-    });
+    };
 
-    this._margin = ns.util.defaults(margin, {
+    this._margin = {
       top: 0,
       left: 0,
       bottom: 0,
       right: 0
-    });
+    };
 
-    this.reCalculate();
-
+    this.setBox(box, margin);
   };
 
   ns.Layout.prototype.reCalculate = function() {
-    var boardSize = this._board.size();
+
+    var parentSize = {
+      width: 0,
+      height: 0
+    };
+    if (this._parent instanceof HTMLElement) {
+      parentSize.width = this._parent.offsetWidth;
+      parentSize.height = this._parent.offsetHeight;
+    } else if (typeof this._parent.getLayout == 'function') {
+      var parentBounds = this._parent.getLayout().getBounds();
+      parentSize.width = parentBounds.width;
+      parentSize.height = parentBounds.height;
+    } else {
+      throw 'Invalid parent';
+    }
 
     // calculate bounds
-    this._top = parseAndCalc(this._box.top, boardSize.height);
-    this._left = parseAndCalc(this._box.left, boardSize.width);
+    this._top = parseAndCalc(this._box.top, parentSize.height);
+    this._left = parseAndCalc(this._box.left, parentSize.width);
     if (this._box.width == 'auto') {
       // use remaining width
-      this._width = boardSize.width - this._left;
+      this._width = parentSize.width - this._left;
     } else {
-      this._width = parseAndCalc(this._box.width, boardSize.width);
+      this._width = parseAndCalc(this._box.width, parentSize.width);
     }
     if (this._box.height == 'auto') {
       // use remaining height
-      this._height = boardSize.height - this._top;
+      this._height = parentSize.height - this._top;
     } else {
-      this._height = parseAndCalc(this._box.height, boardSize.height);
+      this._height = parseAndCalc(this._box.height, parentSize.height);
     }
-    
+
+  };
+
+  ns.Layout.prototype.setBox = function(box, margin) {
+    this._box = ns.util.defaults(box, this._box);
+    this._margin = ns.util.defaults(margin, this._margin);
+    this.reCalculate();
   };
 
   ns.Layout.prototype.getBounds = function() {
@@ -79,13 +97,18 @@
     };
   };
 
+  ns.Layout.prototype.moveTo = function(x, y) {
+    this._top = y;
+    this._left = x;
+  };
+
   ns.Layout.prototype.translate = function(x, y) {
     this._top += y;
     this._left += x;
   };
 
   ns.Layout.prototype.clone = function() {
-    return new ns.Layout(this._board, ns.util.objClone(this._box),
+    return new ns.Layout(this._parent, ns.util.objClone(this._box),
       ns.util.objClone(this._margin));
   };
 

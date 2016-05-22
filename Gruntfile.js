@@ -5,18 +5,22 @@ module.exports = function(grunt) {
     pkg: grunt.file.readJSON('package.json'),
     meta: {
       banner: '/*!\n' +
-              ' * <%= pkg.name %> <%= pkg.version %> (<%= grunt.template.today("dd-mm-yyyy") %>)\n' +
-              ' * <%= pkg.homepage %>\n' +
-              ' * <%= pkg.license %> licensed\n\n' +
-              ' * Copyright (C) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>, <%= pkg.author.url %>\n' +
-              ' */'
+        ' * <%= pkg.name %> <%= pkg.version %> (<%= grunt.template.today("dd-mm-yyyy") %>)\n' +
+        ' * <%= pkg.homepage %>\n' +
+        ' * <%= pkg.license %> licensed\n\n' +
+        ' * Copyright (C) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>, <%= pkg.author.url %>\n' +
+        ' */'
     },
     concat: {
       options: {
         separator: '\n'
       },
       dist: {
-        src: ['src/polyfills.js', 'src/stepviz.js', 'src/core/*.js', 'src/**/*.js'],
+        src: [
+          'src/stepviz.js', 'src/config.js', 'src/core/core.js',
+          'src/core/*.js', '!src/core/polyfills.js', 'src/**/*.js',
+          'src/core/polyfills.js'
+        ],
         dest: 'dist/stepviz.js'
       }
     },
@@ -55,7 +59,7 @@ module.exports = function(grunt) {
       },
       dist: {
         files: {
-          src: ['dist/*.js', 'dist/*.css', 'samples/*.js']
+          src: ['dist/*.js', 'dist/*.css']
         }
       }
     }
