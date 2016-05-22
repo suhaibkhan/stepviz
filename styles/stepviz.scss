@@ -1,0 +1,22 @@
+.stepViz {
+  font-family: sans-serif;
+  &.array {
+    rect {
+      fill: #FFF;
+      stroke: #000;
+      stroke-width: 2px;
+    }
+    text {
+      color: #000;
+      alignment-baseline: before-edge;
+    }
+    .highlight {
+      rect {
+        fill: #ccc;
+      }
+      text {
+        color: #000;
+      }
+    }
+  }
+}

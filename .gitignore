@@ -1,0 +1,14 @@
+# Operating System Files
+
+*.DS_Store
+Thumbs.db
+*.sw?
+.#*
+*#
+*~
+*.sublime-*
+
+node_modules/
+npm-debug.log
+.sass-cache
+bower_components/

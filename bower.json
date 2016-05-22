@@ -1,0 +1,28 @@
+{
+  "name": "stepviz",
+  "version": "0.1.0",
+  "description": "Javascript library for visualizing algorithms.",
+  "main": [
+    "dist/stepviz.js",
+    "dist/stepviz.css"
+  ],
+  "authors": [
+    "Suhaib Khan <suhaibklm@gmail.com>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/suhaibkhan/stepviz",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/suhaibkhan/stepviz.git"
+  },
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test"
+  ],
+  "dependencies": {
+    "d3": "^3.5.17"
+  }
+}
