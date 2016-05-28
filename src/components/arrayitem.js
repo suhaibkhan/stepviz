@@ -45,9 +45,9 @@
 
   }
 
-  function toggleHighlight(state, props) {
+  function toggleHighlight(state) {
 
-    props = props || {};
+    var props = state.highlightProps || {};
 
     var svgElem = state.svgElem;
     var elemClass = svgElem.attr('class');
@@ -68,28 +68,19 @@
         }
       }
 
-      // save highlight props state
-      state.highlightProps = props;
-
     } else {
       elemClass = elemClass.replace(ns.config.highlightCSSClass, '');
 
       // remove custom highlighting
-      if (state.highlightProps) {
-        for (prop in state.highlightProps) {
-          if (state.highlightProps.hasOwnProperty(prop)) {
-            if (prop.startsWith('rect-')) {
-              svgElem.select('rect').style(prop.substring(5), null);
-            } else if (prop.startsWith('text-')) {
-              svgElem.select('text').style(prop.substring(5), null);
-            }
+      for (prop in props) {
+        if (props.hasOwnProperty(prop)) {
+          if (prop.startsWith('rect-')) {
+            svgElem.select('rect').style(prop.substring(5), null);
+          } else if (prop.startsWith('text-')) {
+            svgElem.select('text').style(prop.substring(5), null);
           }
         }
       }
-
-      // remove
-      state.highlightProps = null;
-
     }
     svgElem.attr('class', elemClass);
   }
@@ -141,12 +132,14 @@
 
   ns.components.ArrayItem.prototype.highlight = function(props) {
     this._state.highlight = true;
-    toggleHighlight(this._state, props);
+    this._state.highlightProps = props;
+    toggleHighlight(this._state);
   };
 
   ns.components.ArrayItem.prototype.unhighlight = function() {
     this._state.highlight = false;
     toggleHighlight(this._state);
+    this._state.highlightProps = null;
   };
 
   ns.components.ArrayItem.prototype.translate = function(x, y, animate) {

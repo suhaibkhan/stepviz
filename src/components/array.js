@@ -56,8 +56,13 @@
         state.children[i].updateLayout(itemBox);
         state.children[i].redraw();
       } else {
+        var childProps = ns.util.objClone(props);
+        if (state.highlight[i]) {
+          childProps.highlight = true;
+          childProps.highlightProps = state.highlight[i];
+        }
         var itemLayout = component.createLayout(itemBox);
-        component.drawArrayItem(array[i], itemLayout, ns.util.objClone(props));
+        component.drawArrayItem(array[i], itemLayout, childProps);
       }
     }
 
@@ -90,6 +95,11 @@
     this._state.svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAY_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+
+    // to save highlight state
+    if (!this._state.highlight) {
+      this._state.highlight = {};
+    }
 
     // draw
     drawArray(this);
@@ -127,6 +137,8 @@
       var index = arrayIndices[i];
       if (index > -1 && index < this._state.children.length) {
         this._state.children[index].highlight(props);
+        // saving state
+        this._state.highlight[index] = props;
       }
     }
   };
@@ -145,6 +157,9 @@
       var index = arrayIndices[i];
       if (index > -1 && index < this._state.children.length) {
         this._state.children[index].unhighlight();
+        if (this._state.highlight[index]) {
+          delete this._state.highlight[index];
+        }
       }
     }
   };

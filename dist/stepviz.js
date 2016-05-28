@@ -385,8 +385,13 @@
         state.children[i].updateLayout(itemBox);
         state.children[i].redraw();
       } else {
+        var childProps = ns.util.objClone(props);
+        if (state.highlight[i]) {
+          childProps.highlight = true;
+          childProps.highlightProps = state.highlight[i];
+        }
         var itemLayout = component.createLayout(itemBox);
-        component.drawArrayItem(array[i], itemLayout, ns.util.objClone(props));
+        component.drawArrayItem(array[i], itemLayout, childProps);
       }
     }
 
@@ -419,6 +424,11 @@
     this._state.svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAY_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+
+    // to save highlight state
+    if (!this._state.highlight) {
+      this._state.highlight = {};
+    }
 
     // draw
     drawArray(this);
@@ -456,6 +466,8 @@
       var index = arrayIndices[i];
       if (index > -1 && index < this._state.children.length) {
         this._state.children[index].highlight(props);
+        // saving state
+        this._state.highlight[index] = props;
       }
     }
   };
@@ -474,6 +486,9 @@
       var index = arrayIndices[i];
       if (index > -1 && index < this._state.children.length) {
         this._state.children[index].unhighlight();
+        if (this._state.highlight[index]) {
+          delete this._state.highlight[index];
+        }
       }
     }
   };
@@ -585,9 +600,9 @@
 
   }
 
-  function toggleHighlight(state, props) {
+  function toggleHighlight(state) {
 
-    props = props || {};
+    var props = state.highlightProps || {};
 
     var svgElem = state.svgElem;
     var elemClass = svgElem.attr('class');
@@ -608,28 +623,19 @@
         }
       }
 
-      // save highlight props state
-      state.highlightProps = props;
-
     } else {
       elemClass = elemClass.replace(ns.config.highlightCSSClass, '');
 
       // remove custom highlighting
-      if (state.highlightProps) {
-        for (prop in state.highlightProps) {
-          if (state.highlightProps.hasOwnProperty(prop)) {
-            if (prop.startsWith('rect-')) {
-              svgElem.select('rect').style(prop.substring(5), null);
-            } else if (prop.startsWith('text-')) {
-              svgElem.select('text').style(prop.substring(5), null);
-            }
+      for (prop in props) {
+        if (props.hasOwnProperty(prop)) {
+          if (prop.startsWith('rect-')) {
+            svgElem.select('rect').style(prop.substring(5), null);
+          } else if (prop.startsWith('text-')) {
+            svgElem.select('text').style(prop.substring(5), null);
           }
         }
       }
-
-      // remove
-      state.highlightProps = null;
-
     }
     svgElem.attr('class', elemClass);
   }
@@ -681,12 +687,14 @@
 
   ns.components.ArrayItem.prototype.highlight = function(props) {
     this._state.highlight = true;
-    toggleHighlight(this._state, props);
+    this._state.highlightProps = props;
+    toggleHighlight(this._state);
   };
 
   ns.components.ArrayItem.prototype.unhighlight = function() {
     this._state.highlight = false;
     toggleHighlight(this._state);
+    this._state.highlightProps = null;
   };
 
   ns.components.ArrayItem.prototype.translate = function(x, y, animate) {
@@ -793,7 +801,7 @@
       right: 10
     };
     var layout = new ns.Layout(container, {}, props.margin);
-    
+
     ns.components.Component.call(this, null, null, layout, props, {});
 
     var compBounds = this._state.layout.getBounds();
