@@ -21,7 +21,7 @@
       right: 10
     };
     var layout = new ns.Layout(container, {}, props.margin);
-    
+
     ns.components.Component.call(this, null, null, layout, props, {});
 
     var compBounds = this._state.layout.getBounds();

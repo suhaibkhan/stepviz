@@ -15,24 +15,30 @@
     var fontSize = state.fontSize;
 
     // draw item
-    var rectElem = svgElem.append('rect')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', compBox.width)
+    var rectElem = svgElem.select('rect');
+    if (rectElem.empty()) {
+      rectElem = svgElem.append('rect')
+        .attr('x', 0)
+        .attr('y', 0);
+    }
+    rectElem.attr('width', compBox.width)
       .attr('height', compBox.height);
 
-    var textElem = svgElem.append('text')
-      .text(renderer(value))
-      .attr('x', 0)
-      .attr('y', 0)
-      .style('font-size', fontSize);
+    var textElem = svgElem.select('text');
+    if (textElem.empty()) {
+      textElem = svgElem.append('text')
+        .text(renderer(value))
+        .attr('x', 0)
+        .attr('y', 0)
+        .style('font-size', fontSize);
+    }
 
     // align text in center of rect
     var rectBBox = rectElem.node().getBBox();
     var textBBox = textElem.node().getBBox();
 
-    textElem.attr('dx', (rectBBox.width - textBBox.width) / 2);
-    textElem.attr('dy', (rectBBox.height - textBBox.height) / 2);
+    textElem.attr('dx', (rectBBox.width - textBBox.width) / 2)
+      .attr('dy', (rectBBox.height - textBBox.height) / 2);
 
     // highlight
     toggleHighlight(state);
@@ -67,6 +73,7 @@
 
     } else {
       elemClass = elemClass.replace(ns.config.highlightCSSClass, '');
+
       // remove custom highlighting
       if (state.highlightProps) {
         for (prop in state.highlightProps) {
@@ -79,6 +86,9 @@
           }
         }
       }
+
+      // remove
+      state.highlightProps = null;
 
     }
     svgElem.attr('class', elemClass);
@@ -117,10 +127,14 @@
       throw 'ArrayItem redraw error - Invalid state or SVG';
     }
 
-    // clear existing
-    this._state.svgElem.selectAll('*').remove();
     // recalculate layout
     this._state.layout.reCalculate();
+
+    var layout = this._state.layout;
+    var compBox = layout.getBox();
+    this._state.svgElem
+      .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+
     // draw
     drawArrayItem(this._state);
   };

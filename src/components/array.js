@@ -54,6 +54,7 @@
 
       if (state.children.length > i) {
         state.children[i].updateLayout(itemBox);
+        state.children[i].redraw();
       } else {
         var itemLayout = component.createLayout(itemBox);
         component.drawArrayItem(array[i], itemLayout, ns.util.objClone(props));
@@ -109,7 +110,7 @@
     // recalculate layout
     this._state.layout.reCalculate();
     // draw
-    drawArray(this, this._state);
+    drawArray(this);
   };
 
   ns.components.Array.prototype.highlight = function(arrayIndices, props) {

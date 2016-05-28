@@ -135,7 +135,7 @@
       parentSize.width = this._parent.offsetWidth;
       parentSize.height = this._parent.offsetHeight;
     } else if (typeof this._parent.getLayout == 'function') {
-      var parentBounds = this._parent.getLayout().getBounds();
+      var parentBounds = this._parent.getLayout().getBox();
       parentSize.width = parentBounds.width;
       parentSize.height = parentBounds.height;
     } else {
@@ -383,6 +383,7 @@
 
       if (state.children.length > i) {
         state.children[i].updateLayout(itemBox);
+        state.children[i].redraw();
       } else {
         var itemLayout = component.createLayout(itemBox);
         component.drawArrayItem(array[i], itemLayout, ns.util.objClone(props));
@@ -438,7 +439,7 @@
     // recalculate layout
     this._state.layout.reCalculate();
     // draw
-    drawArray(this, this._state);
+    drawArray(this);
   };
 
   ns.components.Array.prototype.highlight = function(arrayIndices, props) {
@@ -554,24 +555,30 @@
     var fontSize = state.fontSize;
 
     // draw item
-    var rectElem = svgElem.append('rect')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', compBox.width)
+    var rectElem = svgElem.select('rect');
+    if (rectElem.empty()) {
+      rectElem = svgElem.append('rect')
+        .attr('x', 0)
+        .attr('y', 0);
+    }
+    rectElem.attr('width', compBox.width)
       .attr('height', compBox.height);
 
-    var textElem = svgElem.append('text')
-      .text(renderer(value))
-      .attr('x', 0)
-      .attr('y', 0)
-      .style('font-size', fontSize);
+    var textElem = svgElem.select('text');
+    if (textElem.empty()) {
+      textElem = svgElem.append('text')
+        .text(renderer(value))
+        .attr('x', 0)
+        .attr('y', 0)
+        .style('font-size', fontSize);
+    }
 
     // align text in center of rect
     var rectBBox = rectElem.node().getBBox();
     var textBBox = textElem.node().getBBox();
 
-    textElem.attr('dx', (rectBBox.width - textBBox.width) / 2);
-    textElem.attr('dy', (rectBBox.height - textBBox.height) / 2);
+    textElem.attr('dx', (rectBBox.width - textBBox.width) / 2)
+      .attr('dy', (rectBBox.height - textBBox.height) / 2);
 
     // highlight
     toggleHighlight(state);
@@ -606,6 +613,7 @@
 
     } else {
       elemClass = elemClass.replace(ns.config.highlightCSSClass, '');
+
       // remove custom highlighting
       if (state.highlightProps) {
         for (prop in state.highlightProps) {
@@ -618,6 +626,9 @@
           }
         }
       }
+
+      // remove
+      state.highlightProps = null;
 
     }
     svgElem.attr('class', elemClass);
@@ -656,10 +667,14 @@
       throw 'ArrayItem redraw error - Invalid state or SVG';
     }
 
-    // clear existing
-    this._state.svgElem.selectAll('*').remove();
     // recalculate layout
     this._state.layout.reCalculate();
+
+    var layout = this._state.layout;
+    var compBox = layout.getBox();
+    this._state.svgElem
+      .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+
     // draw
     drawArrayItem(this._state);
   };

@@ -48,7 +48,7 @@
       parentSize.width = this._parent.offsetWidth;
       parentSize.height = this._parent.offsetHeight;
     } else if (typeof this._parent.getLayout == 'function') {
-      var parentBounds = this._parent.getLayout().getBounds();
+      var parentBounds = this._parent.getLayout().getBox();
       parentSize.width = parentBounds.width;
       parentSize.height = parentBounds.height;
     } else {
