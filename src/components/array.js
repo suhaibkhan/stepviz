@@ -13,13 +13,14 @@
 
   ns.constants.ARRAY_PROP_LIST = ['dir', 'fontSize', 'renderer'];
 
-  function drawArray(component, state) {
+  function drawArray(component) {
+    var state = component._state;
     var direction = state.dir;
     var compBox = state.layout.getBox();
     var array = state.value;
 
     var props = {};
-    ns.constants.ARRAYITEM_PROP_LIST.forEach(function(propKey){
+    ns.constants.ARRAYITEM_PROP_LIST.forEach(function(propKey) {
       props[propKey] = state[propKey];
     });
 
@@ -71,11 +72,7 @@
       throw 'Empty array';
     }
 
-    if (!layout) {
-      throw 'Invalid layout';
-    }
-
-    this._state = ns.util.defaults(props, {
+    ns.components.Component.call(this, parent, array, layout, props, {
       dir: ns.constants.ARRAY_HORZ_DIR,
       fontSize: ns.config.defaultFontSize,
       renderer: function(d) {
@@ -87,27 +84,20 @@
       }
     });
 
-    this._state.value = array;
-
-    this._state.layout = layout;
     var compBox = layout.getBox();
-
-    this._state.parent = parent;
 
     this._state.svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAY_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
 
-    this._state.children = [];
-
     // draw
-    drawArray(this, this._state);
+    drawArray(this);
 
   };
 
-  ns.components.Array.prototype.createLayout = function(box, margin){
-    return new ns.Layout(this, box, margin);
-  };
+  // inherit from base class
+  ns.components.Array.prototype = Object.create(ns.components.Component.prototype);
+  ns.components.Array.prototype.constructor = ns.components.Array;
 
   ns.components.Array.prototype.drawArrayItem = function(value, layout, props) {
     var arrayItemComp = new ns.components.ArrayItem(this, value, layout, props);
@@ -120,18 +110,6 @@
     this._state.layout.reCalculate();
     // draw
     drawArray(this, this._state);
-  };
-
-  ns.components.Array.prototype.svg = function() {
-    return this._state.svgElem;
-  };
-
-  ns.components.Array.prototype.getLayout = function() {
-    return this._state.layout;
-  };
-
-  ns.components.Array.prototype.updateLayout = function(box, margin) {
-    return this._state.layout.setBox(box, margin);
   };
 
   ns.components.Array.prototype.highlight = function(arrayIndices, props) {
@@ -216,36 +194,15 @@
       jDir: ns.constants.ARRAY_ANIM_SWAP_PATH_AFTER
     });
 
-    if (i > -1 && j > -1 && i < this._state.length &&
-      j < this._state.length && i != j) {
+    if (i > -1 && j > -1 && i < this._state.children.length &&
+      j < this._state.children.length && i != j) {
 
-      var tempItem = this._state[i];
-      this._state[i] = this._state[j];
-      this._state[j] = tempItem;
+      var tempItem = this._state.children[i];
+      this._state.children[i] = this._state.children[j];
+      this._state.children[j] = tempItem;
 
-      var ithTransform = d3.transform(this._state[j].elem.attr('transform'));
-      var jthTransform = d3.transform(this._state[i].elem.attr('transform'));
+      // swap animation
 
-      var ithBox = this._state[j].elem.node().getBBox();
-      var jthBox = this._state[i].elem.node().getBBox();
-
-      this._state[i].elem
-        .transition()
-        .duration(1000)
-        .attr('transform', 'translate(' + -(jthBox.width + 10) + ',' + jthTransform.translate[1] + ')')
-        //.transition()
-        .attr('transform', 'translate(' + -(jthBox.width + 10) + ',' + ithTransform.translate[1] + ')')
-        //.transition()
-        .attr('transform', 'translate(' + ithTransform.translate[0] + ',' + ithTransform.translate[1] + ')');
-
-      this._state[j].elem
-        .transition()
-        .duration(1000)
-        .attr('transform', 'translate(' + (ithBox.width + 10) + ',' + ithTransform.translate[1] + ')')
-        .transition()
-        .attr('transform', 'translate(' + (ithBox.width + 10) + ',' + jthTransform.translate[1] + ')')
-        .transition()
-        .attr('transform', 'translate(' + jthTransform.translate[0] + ',' + jthTransform.translate[1] + ')');
     }
   };
 

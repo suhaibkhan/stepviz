@@ -45,14 +45,14 @@
 
     var svgElem = state.svgElem;
     var elemClass = svgElem.attr('class');
-
+    var prop = null;
     // highlight if needed
     if (state.highlight) {
       if (elemClass.indexOf(ns.config.highlightCSSClass) == -1) {
         elemClass += ' ' + ns.config.highlightCSSClass;
       }
       // custom style for highlighting
-      for (var prop in props) {
+      for (prop in props) {
         if (props.hasOwnProperty(prop)) {
           if (prop.startsWith('rect-')) {
             svgElem.select('rect').style(prop.substring(5), props[prop]);
@@ -61,26 +61,32 @@
           }
         }
       }
+
+      // save highlight props state
+      state.highlightProps = props;
+
     } else {
       elemClass = elemClass.replace(ns.config.highlightCSSClass, '');
       // remove custom highlighting
-      // svgElem.select('rect').attr('style', null);
-      //svgElem.select('text').attr('style', null);
+      if (state.highlightProps) {
+        for (prop in state.highlightProps) {
+          if (state.highlightProps.hasOwnProperty(prop)) {
+            if (prop.startsWith('rect-')) {
+              svgElem.select('rect').style(prop.substring(5), null);
+            } else if (prop.startsWith('text-')) {
+              svgElem.select('text').style(prop.substring(5), null);
+            }
+          }
+        }
+      }
+
     }
     svgElem.attr('class', elemClass);
   }
 
   ns.components.ArrayItem = function(parent, value, layout, props) {
 
-    if (typeof value == 'undefined') {
-      throw 'Invalid value';
-    }
-
-    if (!layout) {
-      throw 'Invalid layout';
-    }
-
-    this._state = ns.util.defaults(props, {
+    ns.components.Component.call(this, parent, value, layout, props, {
       fontSize: ns.config.defaultFontSize,
       renderer: function(d) {
         if (d === null) {
@@ -91,12 +97,7 @@
       }
     });
 
-    this._state.value = value;
-
-    this._state.layout = layout;
     var compBox = layout.getBox();
-
-    this._state.parent = parent;
 
     this._state.svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAYITEM_CSS_CLASS)
@@ -105,6 +106,10 @@
     // draw
     drawArrayItem(this._state);
   };
+
+  // inherit from base class
+  ns.components.ArrayItem.prototype = Object.create(ns.components.Component.prototype);
+  ns.components.ArrayItem.prototype.constructor = ns.components.ArrayItem;
 
   ns.components.ArrayItem.prototype.redraw = function() {
 
@@ -118,18 +123,6 @@
     this._state.layout.reCalculate();
     // draw
     drawArrayItem(this._state);
-  };
-
-  ns.components.ArrayItem.prototype.svg = function() {
-    return this._state.svgElem;
-  };
-
-  ns.components.ArrayItem.prototype.getLayout = function() {
-    return this._state.layout;
-  };
-
-  ns.components.ArrayItem.prototype.updateLayout = function(box, margin) {
-    return this._state.layout.setBox(box, margin);
   };
 
   ns.components.ArrayItem.prototype.highlight = function(props) {

@@ -9,9 +9,44 @@
   }
 
   // init namespaces
-  var ns = {};
-  ns.components = {};
-  ns.constants = {};
+  /**
+   * stepViz Namespace
+   *
+   * @namespace
+   */
+  var ns = {
+    /**
+     * Components Namespace
+     *
+     * @namespace
+     * @memberof stepViz
+     */
+    components: {},
+
+    /**
+     * Constants Namespace
+     *
+     * @namespace
+     * @memberof stepViz
+     */
+    constants: {},
+
+    /**
+     * Configuration Namespace
+     *
+     * @namespace
+     * @memberof stepViz
+     */
+    config: {},
+
+    /**
+     * Utility functions Namespace
+     *
+     * @namespace
+     * @memberof stepViz
+     */
+    util: {}
+  };
 
   // set as global
   window.stepViz = ns;

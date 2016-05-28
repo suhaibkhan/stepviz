@@ -17,8 +17,10 @@ module.exports = function(grunt) {
       },
       dist: {
         src: [
-          'src/stepviz.js', 'src/config.js', 'src/core/core.js',
-          'src/core/*.js', '!src/core/polyfills.js', 'src/**/*.js',
+          'src/stepviz.js', 'src/config.js',
+          'src/core/core.js', 'src/core/*.js', '!src/core/polyfills.js',
+          'src/components/component.js', 'src/components/*.js', 
+          'src/**/*.js',
           'src/core/polyfills.js'
         ],
         dest: 'dist/stepviz.js'

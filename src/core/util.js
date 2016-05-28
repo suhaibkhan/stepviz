@@ -2,16 +2,15 @@
 
   'use strict';
 
-  ns.util = {};
-
   ns.util.defaults = function(props, defaults) {
     props = props || {};
+    var clonedProps = ns.util.objClone(props);
     for (var prop in defaults) {
-      if (defaults.hasOwnProperty(prop) && !props.hasOwnProperty(prop)) {
-        props[prop] = defaults[prop];
+      if (defaults.hasOwnProperty(prop) && !clonedProps.hasOwnProperty(prop)) {
+        clonedProps[prop] = defaults[prop];
       }
     }
-    return props;
+    return clonedProps;
   };
 
   ns.util.objClone = function(obj) {

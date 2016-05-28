@@ -1,5 +1,5 @@
 /*!
- * stepviz 0.1.0 (23-05-2016)
+ * stepviz 0.1.0 (28-05-2016)
  * https://github.com/suhaibkhan/stepviz
  * MIT licensed
 
@@ -16,9 +16,44 @@
   }
 
   // init namespaces
-  var ns = {};
-  ns.components = {};
-  ns.constants = {};
+  /**
+   * stepViz Namespace
+   *
+   * @namespace
+   */
+  var ns = {
+    /**
+     * Components Namespace
+     *
+     * @namespace
+     * @memberof stepViz
+     */
+    components: {},
+
+    /**
+     * Constants Namespace
+     *
+     * @namespace
+     * @memberof stepViz
+     */
+    constants: {},
+
+    /**
+     * Configuration Namespace
+     *
+     * @namespace
+     * @memberof stepViz
+     */
+    config: {},
+
+    /**
+     * Utility functions Namespace
+     *
+     * @namespace
+     * @memberof stepViz
+     */
+    util: {}
+  };
 
   // set as global
   window.stepViz = ns;
@@ -29,11 +64,13 @@
 
   'use strict';
 
-  ns.config = {};
+  // Default Configuration
 
-  // default config
+  // Default theme
   ns.config.themeCSSClass = 'default';
+  // CSS class used for highlighting
   ns.config.highlightCSSClass = 'highlight';
+  // Default font size
   ns.config.defaultFontSize = '12px';
 
 }(window.stepViz));
@@ -168,16 +205,15 @@
 
   'use strict';
 
-  ns.util = {};
-
   ns.util.defaults = function(props, defaults) {
     props = props || {};
+    var clonedProps = ns.util.objClone(props);
     for (var prop in defaults) {
-      if (defaults.hasOwnProperty(prop) && !props.hasOwnProperty(prop)) {
-        props[prop] = defaults[prop];
+      if (defaults.hasOwnProperty(prop) && !clonedProps.hasOwnProperty(prop)) {
+        clonedProps[prop] = defaults[prop];
       }
     }
-    return props;
+    return clonedProps;
   };
 
   ns.util.objClone = function(obj) {
@@ -213,6 +249,88 @@
 
   'use strict';
 
+  /**
+   * Base class for all components
+   *
+   * @class
+   * @memberof stepViz.components
+   */
+  ns.components.Component = function(parent, value, layout, props, defaults) {
+    // default values for props
+    defaults = defaults || {};
+
+    if (typeof value == 'undefined') {
+      throw 'Invalid value';
+    }
+
+    if (!layout) {
+      throw 'Invalid layout';
+    }
+
+    this._state = ns.util.defaults(props, defaults);
+    this._state.parent = parent;
+    this._state.value = value;
+    this._state.layout = layout;
+    this._state.children = [];
+    // will be defined in child class
+    this._state.svgElem = null;
+
+  };
+
+  /**
+   * Returns layout of the component.
+   *
+   * @return {stepViz.Layout} layout
+   */
+  ns.components.Component.prototype.getLayout = function() {
+    return this._state.layout;
+  };
+
+  /**
+   * Create a layout with current component as parent.
+   *
+   * @param {Object} box - Layout box object
+   * @param {Object} margin - Layout margin object
+   * @return {stepViz.Layout} new layout
+   */
+  ns.components.Component.prototype.createLayout = function(box, margin) {
+    return new ns.Layout(this, box, margin);
+  };
+
+  /**
+   * Update layout associated with current component.
+   *
+   * @param {Object} box - New layout box object
+   * @param {Object} margin - New layout margin object
+   */
+  ns.components.Component.prototype.updateLayout = function(box, margin) {
+    return this._state.layout.setBox(box, margin);
+  };
+
+  /**
+   * Returns SVG container of the component. Usually an SVG group.
+   *
+   * @return {Array} d3 selector corresponding to SVGElement of the component.
+   */
+  ns.components.Component.prototype.svg = function() {
+    return this._state.svgElem;
+  };
+
+  /**
+   * Redraws component
+   * @abstract
+   */
+  ns.components.Component.prototype.redraw = function() {
+    // needs to be implemented in the child class
+    throw 'Not implemented';
+  };
+
+}(window.stepViz, window.d3));
+
+(function(ns, d3) {
+
+  'use strict';
+
   ns.constants.ARRAY_CSS_CLASS = 'array';
 
   ns.constants.ARRAY_HORZ_DIR = 'horizontal';
@@ -224,13 +342,14 @@
 
   ns.constants.ARRAY_PROP_LIST = ['dir', 'fontSize', 'renderer'];
 
-  function drawArray(component, state) {
+  function drawArray(component) {
+    var state = component._state;
     var direction = state.dir;
     var compBox = state.layout.getBox();
     var array = state.value;
 
     var props = {};
-    ns.constants.ARRAYITEM_PROP_LIST.forEach(function(propKey){
+    ns.constants.ARRAYITEM_PROP_LIST.forEach(function(propKey) {
       props[propKey] = state[propKey];
     });
 
@@ -282,11 +401,7 @@
       throw 'Empty array';
     }
 
-    if (!layout) {
-      throw 'Invalid layout';
-    }
-
-    this._state = ns.util.defaults(props, {
+    ns.components.Component.call(this, parent, array, layout, props, {
       dir: ns.constants.ARRAY_HORZ_DIR,
       fontSize: ns.config.defaultFontSize,
       renderer: function(d) {
@@ -298,27 +413,20 @@
       }
     });
 
-    this._state.value = array;
-
-    this._state.layout = layout;
     var compBox = layout.getBox();
-
-    this._state.parent = parent;
 
     this._state.svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAY_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
 
-    this._state.children = [];
-
     // draw
-    drawArray(this, this._state);
+    drawArray(this);
 
   };
 
-  ns.components.Array.prototype.createLayout = function(box, margin){
-    return new ns.Layout(this, box, margin);
-  };
+  // inherit from base class
+  ns.components.Array.prototype = Object.create(ns.components.Component.prototype);
+  ns.components.Array.prototype.constructor = ns.components.Array;
 
   ns.components.Array.prototype.drawArrayItem = function(value, layout, props) {
     var arrayItemComp = new ns.components.ArrayItem(this, value, layout, props);
@@ -331,18 +439,6 @@
     this._state.layout.reCalculate();
     // draw
     drawArray(this, this._state);
-  };
-
-  ns.components.Array.prototype.svg = function() {
-    return this._state.svgElem;
-  };
-
-  ns.components.Array.prototype.getLayout = function() {
-    return this._state.layout;
-  };
-
-  ns.components.Array.prototype.updateLayout = function(box, margin) {
-    return this._state.layout.setBox(box, margin);
   };
 
   ns.components.Array.prototype.highlight = function(arrayIndices, props) {
@@ -427,36 +523,15 @@
       jDir: ns.constants.ARRAY_ANIM_SWAP_PATH_AFTER
     });
 
-    if (i > -1 && j > -1 && i < this._state.length &&
-      j < this._state.length && i != j) {
+    if (i > -1 && j > -1 && i < this._state.children.length &&
+      j < this._state.children.length && i != j) {
 
-      var tempItem = this._state[i];
-      this._state[i] = this._state[j];
-      this._state[j] = tempItem;
+      var tempItem = this._state.children[i];
+      this._state.children[i] = this._state.children[j];
+      this._state.children[j] = tempItem;
 
-      var ithTransform = d3.transform(this._state[j].elem.attr('transform'));
-      var jthTransform = d3.transform(this._state[i].elem.attr('transform'));
+      // swap animation
 
-      var ithBox = this._state[j].elem.node().getBBox();
-      var jthBox = this._state[i].elem.node().getBBox();
-
-      this._state[i].elem
-        .transition()
-        .duration(1000)
-        .attr('transform', 'translate(' + -(jthBox.width + 10) + ',' + jthTransform.translate[1] + ')')
-        //.transition()
-        .attr('transform', 'translate(' + -(jthBox.width + 10) + ',' + ithTransform.translate[1] + ')')
-        //.transition()
-        .attr('transform', 'translate(' + ithTransform.translate[0] + ',' + ithTransform.translate[1] + ')');
-
-      this._state[j].elem
-        .transition()
-        .duration(1000)
-        .attr('transform', 'translate(' + (ithBox.width + 10) + ',' + ithTransform.translate[1] + ')')
-        .transition()
-        .attr('transform', 'translate(' + (ithBox.width + 10) + ',' + jthTransform.translate[1] + ')')
-        .transition()
-        .attr('transform', 'translate(' + jthTransform.translate[0] + ',' + jthTransform.translate[1] + ')');
     }
   };
 
@@ -509,14 +584,14 @@
 
     var svgElem = state.svgElem;
     var elemClass = svgElem.attr('class');
-
+    var prop = null;
     // highlight if needed
     if (state.highlight) {
       if (elemClass.indexOf(ns.config.highlightCSSClass) == -1) {
         elemClass += ' ' + ns.config.highlightCSSClass;
       }
       // custom style for highlighting
-      for (var prop in props) {
+      for (prop in props) {
         if (props.hasOwnProperty(prop)) {
           if (prop.startsWith('rect-')) {
             svgElem.select('rect').style(prop.substring(5), props[prop]);
@@ -525,26 +600,32 @@
           }
         }
       }
+
+      // save highlight props state
+      state.highlightProps = props;
+
     } else {
       elemClass = elemClass.replace(ns.config.highlightCSSClass, '');
       // remove custom highlighting
-      // svgElem.select('rect').attr('style', null);
-      //svgElem.select('text').attr('style', null);
+      if (state.highlightProps) {
+        for (prop in state.highlightProps) {
+          if (state.highlightProps.hasOwnProperty(prop)) {
+            if (prop.startsWith('rect-')) {
+              svgElem.select('rect').style(prop.substring(5), null);
+            } else if (prop.startsWith('text-')) {
+              svgElem.select('text').style(prop.substring(5), null);
+            }
+          }
+        }
+      }
+
     }
     svgElem.attr('class', elemClass);
   }
 
   ns.components.ArrayItem = function(parent, value, layout, props) {
 
-    if (typeof value == 'undefined') {
-      throw 'Invalid value';
-    }
-
-    if (!layout) {
-      throw 'Invalid layout';
-    }
-
-    this._state = ns.util.defaults(props, {
+    ns.components.Component.call(this, parent, value, layout, props, {
       fontSize: ns.config.defaultFontSize,
       renderer: function(d) {
         if (d === null) {
@@ -555,12 +636,7 @@
       }
     });
 
-    this._state.value = value;
-
-    this._state.layout = layout;
     var compBox = layout.getBox();
-
-    this._state.parent = parent;
 
     this._state.svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAYITEM_CSS_CLASS)
@@ -569,6 +645,10 @@
     // draw
     drawArrayItem(this._state);
   };
+
+  // inherit from base class
+  ns.components.ArrayItem.prototype = Object.create(ns.components.Component.prototype);
+  ns.components.ArrayItem.prototype.constructor = ns.components.ArrayItem;
 
   ns.components.ArrayItem.prototype.redraw = function() {
 
@@ -582,18 +662,6 @@
     this._state.layout.reCalculate();
     // draw
     drawArrayItem(this._state);
-  };
-
-  ns.components.ArrayItem.prototype.svg = function() {
-    return this._state.svgElem;
-  };
-
-  ns.components.ArrayItem.prototype.getLayout = function() {
-    return this._state.layout;
-  };
-
-  ns.components.ArrayItem.prototype.updateLayout = function(box, margin) {
-    return this._state.layout.setBox(box, margin);
   };
 
   ns.components.ArrayItem.prototype.highlight = function(props) {
@@ -695,26 +763,23 @@
   ns.constants.BOARD_PROP_LIST = ['margin'];
 
   ns.components.Board = function(container, props) {
+
     if (typeof container === 'string') {
       container = document.getElementById(container);
     } else if (!(container instanceof HTMLElement)) {
       throw 'Invalid container';
     }
 
-    this._state = ns.util.defaults(props, {
-      margin: {
-        top: 10,
-        left: 10,
-        bottom: 10,
-        right: 10
-      }
-    });
-
-    // generate layout to fill board in container
-    this._state.layout = new ns.Layout(container, {}, this._state.margin);
-
-    // no parent for Board
-    this._state.parent = null;
+    props = props || {};
+    props.margin = props.margin || {
+      top: 10,
+      left: 10,
+      bottom: 10,
+      right: 10
+    };
+    var layout = new ns.Layout(container, {}, props.margin);
+    
+    ns.components.Component.call(this, null, null, layout, props, {});
 
     var compBounds = this._state.layout.getBounds();
     var compBox = this._state.layout.getBox();
@@ -726,10 +791,11 @@
       .append('g')
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')')
       .attr('class', ns.constants.MAIN_CSS_CLASS + ' ' + ns.config.themeCSSClass);
-
-    this._state.children = [];
-
   };
+
+  // inherit from base class
+  ns.components.Board.prototype = Object.create(ns.components.Component.prototype);
+  ns.components.Board.prototype.constructor = ns.components.Board;
 
   ns.components.Board.prototype.redraw = function() {
 
@@ -747,22 +813,10 @@
 
   };
 
-  ns.components.Board.prototype.svg = function(){
-    return this._state.svgElem;
-  };
-
-  ns.components.Board.prototype.getLayout = function() {
-    return this._state.layout;
-  };
-
   ns.components.Board.prototype.drawArray = function(array, layout, props) {
     var arrayComp = new ns.components.Array(this, array, layout, props);
     this._state.children.push(arrayComp);
     return arrayComp;
-  };
-
-  ns.components.Board.prototype.createLayout = function(box, margin) {
-    return new ns.Layout(this, box, margin);
   };
 
 }(window.stepViz, window.d3));
@@ -786,4 +840,25 @@ if (!String.prototype.endsWith) {
     var lastIndex = subjectString.indexOf(searchString, position);
     return lastIndex !== -1 && lastIndex === position;
   };
+}
+
+if (typeof Object.create != 'function') {
+  Object.create = (function() {
+    var Temp = function() {};
+    return function (prototype) {
+      if (arguments.length > 1) {
+        throw Error('Second argument not supported');
+      }
+      if(prototype !== Object(prototype) && prototype !== null) {
+        throw TypeError('Argument must be an object or null');
+     }
+     if (prototype === null) {
+        throw Error('null [[Prototype]] not supported');
+      }
+      Temp.prototype = prototype;
+      var result = new Temp();
+      Temp.prototype = null;
+      return result;
+    };
+  })();
 }

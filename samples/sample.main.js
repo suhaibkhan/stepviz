@@ -20,12 +20,12 @@
       });
 
     setTimeout(function() {
-      rawArrayComp.highlight([2, 5]);
+      rawArrayComp.highlight([2, 5], {'rect-fill': 'red'});
       // rawArrayComp.swap(2, 5);
     }, 1000);
 
     setTimeout(function() {
-      rawArrayComp.unhighlight([2, 5]);
+      //rawArrayComp.unhighlight([2, 5]);
       var clone = rawArrayComp.clone();
       clone.translate(80, 0).then(function(){
         alert('ok');
