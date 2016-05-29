@@ -25,17 +25,14 @@
     }, 1000);
 
     setTimeout(function() {
-      //rawArrayComp.unhighlight([2, 5]);
+      rawArrayComp.unhighlight(2);
       var clone = rawArrayComp.clone();
       clone.translate(80, 0).then(function(){
-        alert('ok');
       });
     }, 4000);
 
     // var comArrLayout = vizContainer.layout({left: '50%', height: '5%'});
     // var comArrayComp = vizContainer.drawArray(rawArray, comArrLayout);
-
-    console.log(vizContainer);
 
     window.onresize = function() {
       vizContainer.redraw();

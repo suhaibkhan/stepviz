@@ -2,6 +2,11 @@
 
   'use strict';
 
+  ns.util.inherits = function(base, child) {
+    child.prototype = Object.create(base.prototype);
+    child.prototype.constructor = child;
+  };
+
   ns.util.defaults = function(props, defaults) {
     props = props || {};
     var clonedProps = ns.util.objClone(props);

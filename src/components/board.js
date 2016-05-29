@@ -24,16 +24,18 @@
 
     ns.components.Component.call(this, null, null, layout, props, {});
 
-    var compBounds = this._state.layout.getBounds();
-    var compBox = this._state.layout.getBox();
+    var compBounds = layout.getBounds();
+    var compBox = layout.getBox();
 
-    this._state.svgElem = d3.select(container)
+    var svgElem = d3.select(container)
       .append('svg')
       .attr('width', compBounds.width)
       .attr('height', compBounds.height)
       .append('g')
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')')
       .attr('class', ns.constants.MAIN_CSS_CLASS + ' ' + ns.config.themeCSSClass);
+    // save SVG element
+    this.setSVG(svgElem);
   };
 
   // inherit from base class
@@ -43,22 +45,20 @@
   ns.components.Board.prototype.redraw = function() {
 
     // recalculate layout
-    this._state.layout.reCalculate();
+    this.layout().reCalculate();
     // update
-    var compBounds = this._state.layout.getBounds();
-    var svgRoot = d3.select(this._state.svgElem.node().parentNode);
+    var compBounds = this.layout().getBounds();
+    var svgRoot = d3.select(this.svg().node().parentNode);
     svgRoot.attr('width', compBounds.width)
       .attr('height', compBounds.height);
 
-    for (var i = 0; i < this._state.children.length; i++) {
-      this._state.children[i].redraw();
-    }
+    this.redrawAllChildren();
 
   };
 
   ns.components.Board.prototype.drawArray = function(array, layout, props) {
     var arrayComp = new ns.components.Array(this, array, layout, props);
-    this._state.children.push(arrayComp);
+    this.addChild(arrayComp);
     return arrayComp;
   };
 

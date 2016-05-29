@@ -1,25 +1,24 @@
 .stepViz {
-
-  // default theme
-  &.default {
-    font-family: sans-serif;
-    .arrayItem {
+  font-family: sans-serif;
+  .arrayItem {
+    rect {
+      fill: none;
+      stroke: #000;
+      stroke-width: 1px;
+    }
+    text {
+      color: #000;
+      alignment-baseline: before-edge;
+    }
+    &.highlight {
       rect {
-        fill: #FFF;
-        stroke: #000;
-        stroke-width: 2px;
+        fill: #ccc;
       }
-      text {
-        color: #000;
-        alignment-baseline: before-edge;
-      }
-
-      &.highlight {
-        rect {
-          fill: #ccc;
-        }
+    }
+    &.borderless {
+      rect {
+        stroke: none;
       }
     }
   }
-
 }

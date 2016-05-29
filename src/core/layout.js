@@ -47,8 +47,8 @@
     if (this._parent instanceof HTMLElement) {
       parentSize.width = this._parent.offsetWidth;
       parentSize.height = this._parent.offsetHeight;
-    } else if (typeof this._parent.getLayout == 'function') {
-      var parentBounds = this._parent.getLayout().getBox();
+    } else if (typeof this._parent.layout == 'function') {
+      var parentBounds = this._parent.layout().getBox();
       parentSize.width = parentBounds.width;
       parentSize.height = parentBounds.height;
     } else {
@@ -98,13 +98,17 @@
   };
 
   ns.Layout.prototype.moveTo = function(x, y) {
-    this._top = y;
-    this._left = x;
+    this.setBox({
+      top: y,
+      left: x
+    });
   };
 
   ns.Layout.prototype.translate = function(x, y) {
-    this._top += y;
-    this._left += x;
+    this.setBox({
+      top: this._top + y,
+      left: this._left + x
+    });
   };
 
   ns.Layout.prototype.clone = function() {

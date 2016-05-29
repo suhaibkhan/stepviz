@@ -1,18 +1,20 @@
 /*!
- * stepviz 0.1.0 (28-05-2016)
+ * stepviz 0.1.0 (29-05-2016)
  * https://github.com/suhaibkhan/stepviz
  * MIT licensed
 
  * Copyright (C) 2016 Suhaib Khan, http://suhaibkhan.github.io
  */
-.stepViz.default {
+.stepViz {
   font-family: sans-serif; }
-  .stepViz.default .arrayItem rect {
-    fill: #FFF;
+  .stepViz .arrayItem rect {
+    fill: none;
     stroke: #000;
-    stroke-width: 2px; }
-  .stepViz.default .arrayItem text {
+    stroke-width: 1px; }
+  .stepViz .arrayItem text {
     color: #000;
     alignment-baseline: before-edge; }
-  .stepViz.default .arrayItem.highlight rect {
+  .stepViz .arrayItem.highlight rect {
     fill: #ccc; }
+  .stepViz .arrayItem.borderless rect {
+    stroke: none; }

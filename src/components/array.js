@@ -14,21 +14,20 @@
   ns.constants.ARRAY_PROP_LIST = ['dir', 'fontSize', 'renderer'];
 
   function drawArray(component) {
-    var state = component._state;
-    var direction = state.dir;
-    var compBox = state.layout.getBox();
-    var array = state.value;
+    var direction = component.state('dir');
+    var compBox = component.layout().getBox();
+    var array = component.value();
 
     var props = {};
     ns.constants.ARRAYITEM_PROP_LIST.forEach(function(propKey) {
-      props[propKey] = state[propKey];
+      props[propKey] = component.state(propKey);
     });
 
     var itemSize = 0;
     if (direction == ns.constants.ARRAY_VERT_DIR) {
-      itemSize = Math.floor(compBox.height / array.length);
+      itemSize = compBox.height / array.length;
     } else {
-      itemSize = Math.floor(compBox.width / array.length);
+      itemSize = compBox.width / array.length;
     }
     var x = 0;
     var y = 0;
@@ -52,14 +51,14 @@
         x += itemSize;
       }
 
-      if (state.children.length > i) {
-        state.children[i].updateLayout(itemBox);
-        state.children[i].redraw();
+      if (component.child(i)) {
+        component.child(i).updateLayout(itemBox);
+        component.child(i).redraw();
       } else {
         var childProps = ns.util.objClone(props);
-        if (state.highlight[i]) {
+        if (component.state('highlight')[i]) {
           childProps.highlight = true;
-          childProps.highlightProps = state.highlight[i];
+          childProps.highlightProps = component.state('highlight')[i];
         }
         var itemLayout = component.createLayout(itemBox);
         component.drawArrayItem(array[i], itemLayout, childProps);
@@ -92,13 +91,15 @@
 
     var compBox = layout.getBox();
 
-    this._state.svgElem = parent.svg().append('g')
+    var svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAY_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+    // save SVG element
+    this.setSVG(svgElem);
 
     // to save highlight state
-    if (!this._state.highlight) {
-      this._state.highlight = {};
+    if (!this.state('highlight')) {
+      this.state('highlight', {});
     }
 
     // draw
@@ -107,18 +108,23 @@
   };
 
   // inherit from base class
-  ns.components.Array.prototype = Object.create(ns.components.Component.prototype);
-  ns.components.Array.prototype.constructor = ns.components.Array;
+  ns.util.inherits(ns.components.Component, ns.components.Array);
 
   ns.components.Array.prototype.drawArrayItem = function(value, layout, props) {
     var arrayItemComp = new ns.components.ArrayItem(this, value, layout, props);
-    this._state.children.push(arrayItemComp);
+    this.addChild(arrayItemComp);
     return arrayItemComp;
   };
 
   ns.components.Array.prototype.redraw = function() {
     // recalculate layout
-    this._state.layout.reCalculate();
+    var layout = this.layout();
+    layout.reCalculate();
+
+    var compBox = layout.getBox();
+    this.svg()
+      .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+
     // draw
     drawArray(this);
   };
@@ -135,10 +141,10 @@
 
     for (var i = 0; i < arrayIndices.length; i++) {
       var index = arrayIndices[i];
-      if (index > -1 && index < this._state.children.length) {
-        this._state.children[index].highlight(props);
+      if (this.child(index)) {
+        this.child(index).highlight(props);
         // saving state
-        this._state.highlight[index] = props;
+        this.state('highlight')[index] = props;
       }
     }
   };
@@ -155,10 +161,10 @@
 
     for (var i = 0; i < arrayIndices.length; i++) {
       var index = arrayIndices[i];
-      if (index > -1 && index < this._state.children.length) {
-        this._state.children[index].unhighlight();
-        if (this._state.highlight[index]) {
-          delete this._state.highlight[index];
+      if (this.child(index)) {
+        this.child(index).unhighlight();
+        if (this.state('highlight')[index]) {
+          delete this.state('highlight')[index];
         }
       }
     }
@@ -170,9 +176,9 @@
       // animate by default
       if (animate !== false) animate = true;
       // update layout
-      that._state.layout.translate(x, y);
+      that.layout().translate(x, y);
 
-      var elem = that._state.svgElem;
+      var elem = that.svg();
       var transform = d3.transform(elem.attr('transform'));
       // add to existing translate
       transform.translate = [transform.translate[0] + x, transform.translate[1] + y];
@@ -186,18 +192,8 @@
   };
 
   ns.components.Array.prototype.clone = function() {
-    var state = this._state;
-
-    var props = {};
-    var discardProps = ['value', 'layout', 'parent', 'svgElem', 'children'];
-    for (var prop in state) {
-      if (state.hasOwnProperty(prop) && discardProps.indexOf(prop) == -1) {
-        props[prop] = ns.util.objClone(state[prop]);
-      }
-    }
-
-    return state.parent.drawArray(ns.util.objClone(state.value),
-      state.layout.clone(), props);
+    return this.parent().drawArray(ns.util.objClone(this.value()),
+      this.layout().clone(), this.cloneProps());
   };
 
   // TODO
@@ -210,10 +206,9 @@
       jDir: ns.constants.ARRAY_ANIM_SWAP_PATH_AFTER
     });
 
-    if (i > -1 && j > -1 && i < this._state.children.length &&
-      j < this._state.children.length && i != j) {
+    if (this.child(i) && this.child(j) && i != j) {
 
-      var tempItem = this._state.children[i];
+      var tempItem = this.child(i);
       this._state.children[i] = this._state.children[j];
       this._state.children[j] = tempItem;
 

@@ -6,13 +6,13 @@
   ns.constants.ARRAYITEM_CSS_CLASS = 'arrayItem';
   ns.constants.ARRAYITEM_PROP_LIST = ['fontSize', 'renderer'];
 
-  function drawArrayItem(state) {
+  function drawArrayItem(component) {
 
-    var svgElem = state.svgElem;
-    var compBox = state.layout.getBox();
-    var value = state.value;
-    var renderer = state.renderer;
-    var fontSize = state.fontSize;
+    var svgElem = component.svg();
+    var compBox = component.layout().getBox();
+    var value = component.value();
+    var renderer = component.state('renderer');
+    var fontSize = component.state('fontSize');
 
     // draw item
     var rectElem = svgElem.select('rect');
@@ -41,19 +41,19 @@
       .attr('dy', (rectBBox.height - textBBox.height) / 2);
 
     // highlight
-    toggleHighlight(state);
+    toggleHighlight(component);
 
   }
 
-  function toggleHighlight(state) {
+  function toggleHighlight(component) {
 
-    var props = state.highlightProps || {};
+    var props = component.state('highlightProps') || {};
 
-    var svgElem = state.svgElem;
+    var svgElem = component.svg();
     var elemClass = svgElem.attr('class');
     var prop = null;
     // highlight if needed
-    if (state.highlight) {
+    if (component.state('highlight')) {
       if (elemClass.indexOf(ns.config.highlightCSSClass) == -1) {
         elemClass += ' ' + ns.config.highlightCSSClass;
       }
@@ -99,47 +99,52 @@
     });
 
     var compBox = layout.getBox();
-
-    this._state.svgElem = parent.svg().append('g')
+    var svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAYITEM_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+    // save SVG element
+    this.setSVG(svgElem);
 
     // draw
-    drawArrayItem(this._state);
+    drawArrayItem(this);
   };
 
   // inherit from base class
-  ns.components.ArrayItem.prototype = Object.create(ns.components.Component.prototype);
-  ns.components.ArrayItem.prototype.constructor = ns.components.ArrayItem;
+  ns.util.inherits(ns.components.Component, ns.components.ArrayItem);
 
   ns.components.ArrayItem.prototype.redraw = function() {
 
-    if (!this._state || !this._state.svgElem) {
+    if (!this.svg()) {
       throw 'ArrayItem redraw error - Invalid state or SVG';
     }
 
     // recalculate layout
-    this._state.layout.reCalculate();
+    var layout = this.layout();
+    layout.reCalculate();
 
-    var layout = this._state.layout;
     var compBox = layout.getBox();
-    this._state.svgElem
+    this.svg()
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
 
     // draw
-    drawArrayItem(this._state);
+    drawArrayItem(this);
+  };
+
+  ns.components.ArrayItem.prototype.changeValue = function(newValue) {
+    this.value(newValue);
+    drawArrayItem(this);
   };
 
   ns.components.ArrayItem.prototype.highlight = function(props) {
-    this._state.highlight = true;
-    this._state.highlightProps = props;
-    toggleHighlight(this._state);
+    this.state('highlight', true);
+    this.state('highlightProps', props);
+    toggleHighlight(this);
   };
 
   ns.components.ArrayItem.prototype.unhighlight = function() {
-    this._state.highlight = false;
-    toggleHighlight(this._state);
-    this._state.highlightProps = null;
+    this.state('highlight', false);
+    toggleHighlight(this);
+    this.state('highlightProps', null);
   };
 
   ns.components.ArrayItem.prototype.translate = function(x, y, animate) {
@@ -148,9 +153,9 @@
       // animate by default
       if (animate !== false) animate = true;
       // update layout
-      that._state.layout.translate(x, y);
+      that.layout().translate(x, y);
 
-      var elem = that._state.svgElem;
+      var elem = that.svg();
       var transform = d3.transform(elem.attr('transform'));
       // add to existing translate
       transform.translate = [transform.translate[0] + x, transform.translate[1] + y];
@@ -169,9 +174,9 @@
       // animate by default
       if (animate !== false) animate = true;
       // update layout
-      that._state.layout.moveTo(x, y);
+      that.layout().moveTo(x, y);
 
-      var elem = that._state.svgElem;
+      var elem = that.svg();
       var transform = d3.transform(elem.attr('transform'));
       // new translate
       transform.translate = [x, y];

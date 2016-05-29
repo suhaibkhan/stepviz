@@ -1,5 +1,5 @@
 /*!
- * stepviz 0.1.0 (28-05-2016)
+ * stepviz 0.1.0 (29-05-2016)
  * https://github.com/suhaibkhan/stepviz
  * MIT licensed
 
@@ -134,8 +134,8 @@
     if (this._parent instanceof HTMLElement) {
       parentSize.width = this._parent.offsetWidth;
       parentSize.height = this._parent.offsetHeight;
-    } else if (typeof this._parent.getLayout == 'function') {
-      var parentBounds = this._parent.getLayout().getBox();
+    } else if (typeof this._parent.layout == 'function') {
+      var parentBounds = this._parent.layout().getBox();
       parentSize.width = parentBounds.width;
       parentSize.height = parentBounds.height;
     } else {
@@ -185,13 +185,17 @@
   };
 
   ns.Layout.prototype.moveTo = function(x, y) {
-    this._top = y;
-    this._left = x;
+    this.setBox({
+      top: y,
+      left: x
+    });
   };
 
   ns.Layout.prototype.translate = function(x, y) {
-    this._top += y;
-    this._left += x;
+    this.setBox({
+      top: this._top + y,
+      left: this._left + x
+    });
   };
 
   ns.Layout.prototype.clone = function() {
@@ -204,6 +208,11 @@
 (function(ns) {
 
   'use strict';
+
+  ns.util.inherits = function(base, child) {
+    child.prototype = Object.create(base.prototype);
+    child.prototype.constructor = child;
+  };
 
   ns.util.defaults = function(props, defaults) {
     props = props || {};
@@ -254,6 +263,7 @@
    *
    * @class
    * @memberof stepViz.components
+   * @abstract
    */
   ns.components.Component = function(parent, value, layout, props, defaults) {
     // default values for props
@@ -278,11 +288,58 @@
   };
 
   /**
+   * Returns or set value of the component.
+   * If new value is not specified, existing value is returned.
+   *
+   * @param {Object} [value] - New value to be saved in state
+   * @return {Object} Value associated with the component.
+   */
+  ns.components.Component.prototype.value = function(newValue) {
+    if (typeof newValue != 'undefined') {
+      // set new value
+      this._state.value = newValue;
+    }
+    return this._state.value;
+  };
+
+  /**
+   * Returns parent of the component or null for root component.
+   *
+   * @return {stepViz.components.Component} Parent component
+   */
+  ns.components.Component.prototype.parent = function() {
+    return this._state.parent;
+  };
+
+  /**
+   * Returns or set value of the specified state property.
+   * If value is not specified, existing value is returned.
+   *
+   * @param {String} property - State property name
+   * @param {Object} [value] - Value to be saved
+   * @return {Object} State property value
+   */
+  ns.components.Component.prototype.state = function(property, value) {
+
+    if (typeof property != 'string') {
+      throw 'Invalid property name';
+    }
+
+    if (typeof value != 'undefined') {
+      // set new value
+      this._state[property] = value;
+    }
+    // return existing value
+    return this._state[property];
+
+  };
+
+  /**
    * Returns layout of the component.
    *
-   * @return {stepViz.Layout} layout
+   * @return {stepViz.Layout} Layout
    */
-  ns.components.Component.prototype.getLayout = function() {
+  ns.components.Component.prototype.layout = function() {
     return this._state.layout;
   };
 
@@ -291,7 +348,7 @@
    *
    * @param {Object} box - Layout box object
    * @param {Object} margin - Layout margin object
-   * @return {stepViz.Layout} new layout
+   * @return {stepViz.Layout} New layout
    */
   ns.components.Component.prototype.createLayout = function(box, margin) {
     return new ns.Layout(this, box, margin);
@@ -317,12 +374,76 @@
   };
 
   /**
+   * Set SVGElement of the component.
+   *
+   * @param {Array} d3 selector corresponding to SVGElement.
+   */
+  ns.components.Component.prototype.setSVG = function(svgElem) {
+    this._state.svgElem = svgElem;
+  };
+
+  /**
    * Redraws component
    * @abstract
    */
   ns.components.Component.prototype.redraw = function() {
-    // needs to be implemented in the child class
-    throw 'Not implemented';
+    // Needs to be implemented in the child class
+    throw 'Not implemented on Component base class';
+  };
+
+  /**
+   * Redraws all children of current component.
+   */
+  ns.components.Component.prototype.redrawAllChildren = function() {
+    for (var i = 0; i < this._state.children.length; i++) {
+      this._state.children[i].redraw();
+    }
+  };
+
+  /**
+   * Add a child component to current component.
+   *
+   * @param {stepViz.components.Component} child - Child component
+   */
+  ns.components.Component.prototype.addChild = function(child) {
+    this._state.children.push(child);
+  };
+
+  /**
+   * Returns child component at specified index or null if not available.
+   *
+   * @param {Number} index - Child component index
+   * @return {stepViz.components.Component} Child component
+   */
+  ns.components.Component.prototype.child = function(index) {
+    if (index >= 0 && index < this._state.children.length) {
+      return this._state.children[index];
+    }
+    return null;
+  };
+
+  /**
+   * Clone state properties from the component.
+   *
+   * @param {Array} excludeProps - Array of properties to exclude while cloning.
+   * @return {Object} Cloned properties object
+   */
+  ns.components.Component.prototype.cloneProps = function(excludeProps) {
+
+    excludeProps = excludeProps || [];
+
+    var state = this._state;
+
+    var props = {};
+    var discardProps = ['value', 'layout', 'parent', 'svgElem', 'children'].concat(excludeProps);
+    for (var prop in state) {
+      if (state.hasOwnProperty(prop) && discardProps.indexOf(prop) == -1) {
+        props[prop] = ns.util.objClone(state[prop]);
+      }
+    }
+
+    return props;
+
   };
 
 }(window.stepViz, window.d3));
@@ -343,21 +464,20 @@
   ns.constants.ARRAY_PROP_LIST = ['dir', 'fontSize', 'renderer'];
 
   function drawArray(component) {
-    var state = component._state;
-    var direction = state.dir;
-    var compBox = state.layout.getBox();
-    var array = state.value;
+    var direction = component.state('dir');
+    var compBox = component.layout().getBox();
+    var array = component.value();
 
     var props = {};
     ns.constants.ARRAYITEM_PROP_LIST.forEach(function(propKey) {
-      props[propKey] = state[propKey];
+      props[propKey] = component.state(propKey);
     });
 
     var itemSize = 0;
     if (direction == ns.constants.ARRAY_VERT_DIR) {
-      itemSize = Math.floor(compBox.height / array.length);
+      itemSize = compBox.height / array.length;
     } else {
-      itemSize = Math.floor(compBox.width / array.length);
+      itemSize = compBox.width / array.length;
     }
     var x = 0;
     var y = 0;
@@ -381,14 +501,14 @@
         x += itemSize;
       }
 
-      if (state.children.length > i) {
-        state.children[i].updateLayout(itemBox);
-        state.children[i].redraw();
+      if (component.child(i)) {
+        component.child(i).updateLayout(itemBox);
+        component.child(i).redraw();
       } else {
         var childProps = ns.util.objClone(props);
-        if (state.highlight[i]) {
+        if (component.state('highlight')[i]) {
           childProps.highlight = true;
-          childProps.highlightProps = state.highlight[i];
+          childProps.highlightProps = component.state('highlight')[i];
         }
         var itemLayout = component.createLayout(itemBox);
         component.drawArrayItem(array[i], itemLayout, childProps);
@@ -421,13 +541,15 @@
 
     var compBox = layout.getBox();
 
-    this._state.svgElem = parent.svg().append('g')
+    var svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAY_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+    // save SVG element
+    this.setSVG(svgElem);
 
     // to save highlight state
-    if (!this._state.highlight) {
-      this._state.highlight = {};
+    if (!this.state('highlight')) {
+      this.state('highlight', {});
     }
 
     // draw
@@ -436,18 +558,23 @@
   };
 
   // inherit from base class
-  ns.components.Array.prototype = Object.create(ns.components.Component.prototype);
-  ns.components.Array.prototype.constructor = ns.components.Array;
+  ns.util.inherits(ns.components.Component, ns.components.Array);
 
   ns.components.Array.prototype.drawArrayItem = function(value, layout, props) {
     var arrayItemComp = new ns.components.ArrayItem(this, value, layout, props);
-    this._state.children.push(arrayItemComp);
+    this.addChild(arrayItemComp);
     return arrayItemComp;
   };
 
   ns.components.Array.prototype.redraw = function() {
     // recalculate layout
-    this._state.layout.reCalculate();
+    var layout = this.layout();
+    layout.reCalculate();
+
+    var compBox = layout.getBox();
+    this.svg()
+      .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+
     // draw
     drawArray(this);
   };
@@ -464,10 +591,10 @@
 
     for (var i = 0; i < arrayIndices.length; i++) {
       var index = arrayIndices[i];
-      if (index > -1 && index < this._state.children.length) {
-        this._state.children[index].highlight(props);
+      if (this.child(index)) {
+        this.child(index).highlight(props);
         // saving state
-        this._state.highlight[index] = props;
+        this.state('highlight')[index] = props;
       }
     }
   };
@@ -484,10 +611,10 @@
 
     for (var i = 0; i < arrayIndices.length; i++) {
       var index = arrayIndices[i];
-      if (index > -1 && index < this._state.children.length) {
-        this._state.children[index].unhighlight();
-        if (this._state.highlight[index]) {
-          delete this._state.highlight[index];
+      if (this.child(index)) {
+        this.child(index).unhighlight();
+        if (this.state('highlight')[index]) {
+          delete this.state('highlight')[index];
         }
       }
     }
@@ -499,9 +626,9 @@
       // animate by default
       if (animate !== false) animate = true;
       // update layout
-      that._state.layout.translate(x, y);
+      that.layout().translate(x, y);
 
-      var elem = that._state.svgElem;
+      var elem = that.svg();
       var transform = d3.transform(elem.attr('transform'));
       // add to existing translate
       transform.translate = [transform.translate[0] + x, transform.translate[1] + y];
@@ -515,18 +642,8 @@
   };
 
   ns.components.Array.prototype.clone = function() {
-    var state = this._state;
-
-    var props = {};
-    var discardProps = ['value', 'layout', 'parent', 'svgElem', 'children'];
-    for (var prop in state) {
-      if (state.hasOwnProperty(prop) && discardProps.indexOf(prop) == -1) {
-        props[prop] = ns.util.objClone(state[prop]);
-      }
-    }
-
-    return state.parent.drawArray(ns.util.objClone(state.value),
-      state.layout.clone(), props);
+    return this.parent().drawArray(ns.util.objClone(this.value()),
+      this.layout().clone(), this.cloneProps());
   };
 
   // TODO
@@ -539,10 +656,9 @@
       jDir: ns.constants.ARRAY_ANIM_SWAP_PATH_AFTER
     });
 
-    if (i > -1 && j > -1 && i < this._state.children.length &&
-      j < this._state.children.length && i != j) {
+    if (this.child(i) && this.child(j) && i != j) {
 
-      var tempItem = this._state.children[i];
+      var tempItem = this.child(i);
       this._state.children[i] = this._state.children[j];
       this._state.children[j] = tempItem;
 
@@ -561,13 +677,13 @@
   ns.constants.ARRAYITEM_CSS_CLASS = 'arrayItem';
   ns.constants.ARRAYITEM_PROP_LIST = ['fontSize', 'renderer'];
 
-  function drawArrayItem(state) {
+  function drawArrayItem(component) {
 
-    var svgElem = state.svgElem;
-    var compBox = state.layout.getBox();
-    var value = state.value;
-    var renderer = state.renderer;
-    var fontSize = state.fontSize;
+    var svgElem = component.svg();
+    var compBox = component.layout().getBox();
+    var value = component.value();
+    var renderer = component.state('renderer');
+    var fontSize = component.state('fontSize');
 
     // draw item
     var rectElem = svgElem.select('rect');
@@ -596,19 +712,19 @@
       .attr('dy', (rectBBox.height - textBBox.height) / 2);
 
     // highlight
-    toggleHighlight(state);
+    toggleHighlight(component);
 
   }
 
-  function toggleHighlight(state) {
+  function toggleHighlight(component) {
 
-    var props = state.highlightProps || {};
+    var props = component.state('highlightProps') || {};
 
-    var svgElem = state.svgElem;
+    var svgElem = component.svg();
     var elemClass = svgElem.attr('class');
     var prop = null;
     // highlight if needed
-    if (state.highlight) {
+    if (component.state('highlight')) {
       if (elemClass.indexOf(ns.config.highlightCSSClass) == -1) {
         elemClass += ' ' + ns.config.highlightCSSClass;
       }
@@ -654,47 +770,52 @@
     });
 
     var compBox = layout.getBox();
-
-    this._state.svgElem = parent.svg().append('g')
+    var svgElem = parent.svg().append('g')
       .attr('class', ns.constants.ARRAYITEM_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+    // save SVG element
+    this.setSVG(svgElem);
 
     // draw
-    drawArrayItem(this._state);
+    drawArrayItem(this);
   };
 
   // inherit from base class
-  ns.components.ArrayItem.prototype = Object.create(ns.components.Component.prototype);
-  ns.components.ArrayItem.prototype.constructor = ns.components.ArrayItem;
+  ns.util.inherits(ns.components.Component, ns.components.ArrayItem);
 
   ns.components.ArrayItem.prototype.redraw = function() {
 
-    if (!this._state || !this._state.svgElem) {
+    if (!this.svg()) {
       throw 'ArrayItem redraw error - Invalid state or SVG';
     }
 
     // recalculate layout
-    this._state.layout.reCalculate();
+    var layout = this.layout();
+    layout.reCalculate();
 
-    var layout = this._state.layout;
     var compBox = layout.getBox();
-    this._state.svgElem
+    this.svg()
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
 
     // draw
-    drawArrayItem(this._state);
+    drawArrayItem(this);
+  };
+
+  ns.components.ArrayItem.prototype.changeValue = function(newValue) {
+    this.value(newValue);
+    drawArrayItem(this);
   };
 
   ns.components.ArrayItem.prototype.highlight = function(props) {
-    this._state.highlight = true;
-    this._state.highlightProps = props;
-    toggleHighlight(this._state);
+    this.state('highlight', true);
+    this.state('highlightProps', props);
+    toggleHighlight(this);
   };
 
   ns.components.ArrayItem.prototype.unhighlight = function() {
-    this._state.highlight = false;
-    toggleHighlight(this._state);
-    this._state.highlightProps = null;
+    this.state('highlight', false);
+    toggleHighlight(this);
+    this.state('highlightProps', null);
   };
 
   ns.components.ArrayItem.prototype.translate = function(x, y, animate) {
@@ -703,9 +824,9 @@
       // animate by default
       if (animate !== false) animate = true;
       // update layout
-      that._state.layout.translate(x, y);
+      that.layout().translate(x, y);
 
-      var elem = that._state.svgElem;
+      var elem = that.svg();
       var transform = d3.transform(elem.attr('transform'));
       // add to existing translate
       transform.translate = [transform.translate[0] + x, transform.translate[1] + y];
@@ -724,9 +845,9 @@
       // animate by default
       if (animate !== false) animate = true;
       // update layout
-      that._state.layout.moveTo(x, y);
+      that.layout().moveTo(x, y);
 
-      var elem = that._state.svgElem;
+      var elem = that.svg();
       var transform = d3.transform(elem.attr('transform'));
       // new translate
       transform.translate = [x, y];
@@ -804,16 +925,18 @@
 
     ns.components.Component.call(this, null, null, layout, props, {});
 
-    var compBounds = this._state.layout.getBounds();
-    var compBox = this._state.layout.getBox();
+    var compBounds = layout.getBounds();
+    var compBox = layout.getBox();
 
-    this._state.svgElem = d3.select(container)
+    var svgElem = d3.select(container)
       .append('svg')
       .attr('width', compBounds.width)
       .attr('height', compBounds.height)
       .append('g')
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')')
       .attr('class', ns.constants.MAIN_CSS_CLASS + ' ' + ns.config.themeCSSClass);
+    // save SVG element
+    this.setSVG(svgElem);
   };
 
   // inherit from base class
@@ -823,24 +946,115 @@
   ns.components.Board.prototype.redraw = function() {
 
     // recalculate layout
-    this._state.layout.reCalculate();
+    this.layout().reCalculate();
     // update
-    var compBounds = this._state.layout.getBounds();
-    var svgRoot = d3.select(this._state.svgElem.node().parentNode);
+    var compBounds = this.layout().getBounds();
+    var svgRoot = d3.select(this.svg().node().parentNode);
     svgRoot.attr('width', compBounds.width)
       .attr('height', compBounds.height);
 
-    for (var i = 0; i < this._state.children.length; i++) {
-      this._state.children[i].redraw();
-    }
+    this.redrawAllChildren();
 
   };
 
   ns.components.Board.prototype.drawArray = function(array, layout, props) {
     var arrayComp = new ns.components.Array(this, array, layout, props);
-    this._state.children.push(arrayComp);
+    this.addChild(arrayComp);
     return arrayComp;
   };
+
+}(window.stepViz, window.d3));
+
+(function(ns, d3) {
+
+  'use strict';
+
+  ns.constants.MATRIX_CSS_CLASS = 'matrix';
+  ns.constants.ARRAY_PROP_LIST = ['fontSize', 'renderer'];
+
+  ns.components.Matrix = function(parent, matrix, layout, props) {
+
+    if (!Array.isArray(matrix)) {
+      throw 'Invalid matrix';
+    }
+
+    if (matrix.length === 0) {
+      throw 'Empty matrix';
+    }
+
+    ns.components.Component.call(this, parent, matrix, layout, props, {
+      fontSize: ns.config.defaultFontSize,
+      renderer: function(d) {
+        if (d === null) {
+          return '';
+        } else {
+          return JSON.stringify(d);
+        }
+      }
+    });
+
+    var compBox = layout.getBox();
+
+    this._state.svgElem = parent.svg().append('g')
+      .attr('class', ns.constants.MATRIX_CSS_CLASS)
+      .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+
+    // to save highlight state
+    if (!this._state.highlight) {
+      this._state.highlight = {};
+    }
+
+    // draw
+    drawMatrix(this);
+
+  };
+
+  // inherit from base class
+  ns.components.Matrix.prototype = Object.create(ns.components.Component.prototype);
+  ns.components.Matrix.prototype.constructor = ns.components.Matrix;
+
+  function drawMatrix(component) {
+    var state = component._state;
+    var compBox = state.layout.getBox();
+    var matrix = state.value;
+
+    var props = {};
+    ns.constants.ARRAY_PROP_LIST.forEach(function(propKey) {
+      props[propKey] = state[propKey];
+    });
+
+    var rowWidth = compBox.width;
+    var rowHeight = compBox.height/matrix.length;
+    var x = 0;
+    var y = 0;
+
+    for (var i = 0; i < matrix.length; i++){
+      var row = matrix[i];
+      var rowBox = {
+        top: y,
+        left: x,
+        width: rowWidth,
+        height: rowHeight
+      };
+
+      y += rowHeight;
+
+      if (state.children.length > i) {
+        state.children[i].updateLayout(itemBox);
+        state.children[i].redraw();
+      } else {
+        var childProps = ns.util.objClone(props);
+        if (state.highlight[i]) {
+          childProps.highlight = true;
+          childProps.highlightProps = state.highlight[i];
+        }
+        var itemLayout = component.createLayout(itemBox);
+        component.drawArrayItem(array[i], itemLayout, childProps);
+      }
+
+    }
+
+  }
 
 }(window.stepViz, window.d3));
 
