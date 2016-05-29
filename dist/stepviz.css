@@ -6,7 +6,8 @@
  * Copyright (C) 2016 Suhaib Khan, http://suhaibkhan.github.io
  */
 .stepViz {
-  font-family: sans-serif; }
+  font-family: sans-serif;
+  font-size: 12px; }
   .stepViz .arrayItem rect {
     fill: none;
     stroke: #000;

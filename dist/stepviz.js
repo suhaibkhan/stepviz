@@ -962,6 +962,12 @@
     return arrayComp;
   };
 
+  ns.components.Canvas.prototype.drawMatrix = function(matrix, layout, props) {
+    var matrixComp = new ns.components.Matrix(this, matrix, layout, props);
+    this.addChild(matrixComp);
+    return matrixComp;
+  };
+
 }(window.stepViz, window.d3));
 
 (function(ns, d3) {
@@ -1047,13 +1053,19 @@
           childProps.highlight = true;
           childProps.highlightProps = component.state('highlight')[i];
         }
-        var itemLayout = component.createLayout(itemBox);
-        component.drawArrayItem(array[i], itemLayout, childProps);
+        var rowLayout = component.createLayout(rowBox);
+        component.drawArray(row, rowLayout, childProps);
       }
 
     }
 
   }
+
+  ns.components.Matrix.prototype.drawArray = function(array, layout, props) {
+    var arrayComp = new ns.components.Array(this, array, layout, props);
+    this.addChild(arrayComp);
+    return arrayComp;
+  };
 
 }(window.stepViz, window.d3));
 

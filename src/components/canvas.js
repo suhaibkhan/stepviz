@@ -61,4 +61,10 @@
     return arrayComp;
   };
 
+  ns.components.Canvas.prototype.drawMatrix = function(matrix, layout, props) {
+    var matrixComp = new ns.components.Matrix(this, matrix, layout, props);
+    this.addChild(matrixComp);
+    return matrixComp;
+  };
+
 }(window.stepViz, window.d3));
