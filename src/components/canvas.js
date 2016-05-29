@@ -3,9 +3,9 @@
   'use strict';
 
   ns.constants.MAIN_CSS_CLASS = 'stepViz';
-  ns.constants.BOARD_PROP_LIST = ['margin'];
+  ns.constants.CANVAS_PROP_LIST = ['margin'];
 
-  ns.components.Board = function(container, props) {
+  ns.components.Canvas = function(container, props) {
 
     if (typeof container === 'string') {
       container = document.getElementById(container);
@@ -39,10 +39,9 @@
   };
 
   // inherit from base class
-  ns.components.Board.prototype = Object.create(ns.components.Component.prototype);
-  ns.components.Board.prototype.constructor = ns.components.Board;
+  ns.util.inherits(ns.components.Component, ns.components.Canvas);
 
-  ns.components.Board.prototype.redraw = function() {
+  ns.components.Canvas.prototype.redraw = function() {
 
     // recalculate layout
     this.layout().reCalculate();
@@ -56,7 +55,7 @@
 
   };
 
-  ns.components.Board.prototype.drawArray = function(array, layout, props) {
+  ns.components.Canvas.prototype.drawArray = function(array, layout, props) {
     var arrayComp = new ns.components.Array(this, array, layout, props);
     this.addChild(arrayComp);
     return arrayComp;

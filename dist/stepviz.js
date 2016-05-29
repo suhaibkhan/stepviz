@@ -80,7 +80,7 @@
   'use strict';
 
   ns.init = function(container, props) {
-    return new ns.components.Board(container, props);
+    return new ns.components.Canvas(container, props);
   };
 
 }(window.stepViz));
@@ -904,9 +904,9 @@
   'use strict';
 
   ns.constants.MAIN_CSS_CLASS = 'stepViz';
-  ns.constants.BOARD_PROP_LIST = ['margin'];
+  ns.constants.CANVAS_PROP_LIST = ['margin'];
 
-  ns.components.Board = function(container, props) {
+  ns.components.Canvas = function(container, props) {
 
     if (typeof container === 'string') {
       container = document.getElementById(container);
@@ -940,10 +940,9 @@
   };
 
   // inherit from base class
-  ns.components.Board.prototype = Object.create(ns.components.Component.prototype);
-  ns.components.Board.prototype.constructor = ns.components.Board;
+  ns.util.inherits(ns.components.Component, ns.components.Canvas);
 
-  ns.components.Board.prototype.redraw = function() {
+  ns.components.Canvas.prototype.redraw = function() {
 
     // recalculate layout
     this.layout().reCalculate();
@@ -957,7 +956,7 @@
 
   };
 
-  ns.components.Board.prototype.drawArray = function(array, layout, props) {
+  ns.components.Canvas.prototype.drawArray = function(array, layout, props) {
     var arrayComp = new ns.components.Array(this, array, layout, props);
     this.addChild(arrayComp);
     return arrayComp;
@@ -995,13 +994,15 @@
 
     var compBox = layout.getBox();
 
-    this._state.svgElem = parent.svg().append('g')
+    var svgElem = parent.svg().append('g')
       .attr('class', ns.constants.MATRIX_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
+    // save SVG element
+    this.setSVG(svgElem);
 
     // to save highlight state
-    if (!this._state.highlight) {
-      this._state.highlight = {};
+    if (!this.state('highlight')) {
+      this.state('highlight', {});
     }
 
     // draw
@@ -1010,25 +1011,23 @@
   };
 
   // inherit from base class
-  ns.components.Matrix.prototype = Object.create(ns.components.Component.prototype);
-  ns.components.Matrix.prototype.constructor = ns.components.Matrix;
+  ns.util.inherits(ns.components.Component, ns.components.Matrix);
 
   function drawMatrix(component) {
-    var state = component._state;
-    var compBox = state.layout.getBox();
-    var matrix = state.value;
+    var compBox = component.layout().getBox();
+    var matrix = component.value();
 
     var props = {};
     ns.constants.ARRAY_PROP_LIST.forEach(function(propKey) {
-      props[propKey] = state[propKey];
+      props[propKey] = component.state(propKey);
     });
 
     var rowWidth = compBox.width;
-    var rowHeight = compBox.height/matrix.length;
+    var rowHeight = compBox.height / matrix.length;
     var x = 0;
     var y = 0;
 
-    for (var i = 0; i < matrix.length; i++){
+    for (var i = 0; i < matrix.length; i++) {
       var row = matrix[i];
       var rowBox = {
         top: y,
@@ -1039,14 +1038,14 @@
 
       y += rowHeight;
 
-      if (state.children.length > i) {
-        state.children[i].updateLayout(itemBox);
-        state.children[i].redraw();
+      if (component.child(i)) {
+        component.child(i).updateLayout(itemBox);
+        component.child(i).redraw();
       } else {
         var childProps = ns.util.objClone(props);
-        if (state.highlight[i]) {
+        if (component.state('highlight')[i]) {
           childProps.highlight = true;
-          childProps.highlightProps = state.highlight[i];
+          childProps.highlightProps = component.state('highlight')[i];
         }
         var itemLayout = component.createLayout(itemBox);
         component.drawArrayItem(array[i], itemLayout, childProps);
