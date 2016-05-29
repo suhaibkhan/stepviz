@@ -3,10 +3,10 @@
   'use strict';
 
   // constants
-  ns.constants.ARRAYITEM_CSS_CLASS = 'arrayItem';
-  ns.constants.ARRAYITEM_PROP_LIST = ['fontSize', 'renderer'];
+  ns.constants.TEXTBOX_CSS_CLASS = 'textBox';
+  ns.constants.TEXTBOX_PROP_LIST = ['fontSize', 'renderer'];
 
-  function drawArrayItem(component) {
+  function drawTextBox(component) {
 
     var svgElem = component.svg();
     var compBox = component.layout().getBox();
@@ -85,7 +85,7 @@
     svgElem.attr('class', elemClass);
   }
 
-  ns.components.ArrayItem = function(parent, value, layout, props) {
+  ns.components.TextBox = function(parent, value, layout, props) {
 
     ns.components.Component.call(this, parent, value, layout, props, {
       fontSize: ns.config.defaultFontSize,
@@ -100,22 +100,22 @@
 
     var compBox = layout.getBox();
     var svgElem = parent.svg().append('g')
-      .attr('class', ns.constants.ARRAYITEM_CSS_CLASS)
+      .attr('class', ns.constants.TEXTBOX_CSS_CLASS)
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
     // save SVG element
     this.setSVG(svgElem);
 
     // draw
-    drawArrayItem(this);
+    drawTextBox(this);
   };
 
   // inherit from base class
-  ns.util.inherits(ns.components.Component, ns.components.ArrayItem);
+  ns.util.inherits(ns.components.Component, ns.components.TextBox);
 
-  ns.components.ArrayItem.prototype.redraw = function() {
+  ns.components.TextBox.prototype.redraw = function() {
 
     if (!this.svg()) {
-      throw 'ArrayItem redraw error - Invalid state or SVG';
+      throw 'TextBox redraw error - Invalid state or SVG';
     }
 
     // recalculate layout
@@ -127,27 +127,31 @@
       .attr('transform', 'translate(' + compBox.left + ',' + compBox.top + ')');
 
     // draw
-    drawArrayItem(this);
+    drawTextBox(this);
   };
 
-  ns.components.ArrayItem.prototype.changeValue = function(newValue) {
+  ns.components.TextBox.prototype.clone = function(){
+
+  };
+
+  ns.components.TextBox.prototype.changeValue = function(newValue) {
     this.value(newValue);
-    drawArrayItem(this);
+    drawTextBox(this);
   };
 
-  ns.components.ArrayItem.prototype.highlight = function(props) {
+  ns.components.TextBox.prototype.highlight = function(props) {
     this.state('highlight', true);
     this.state('highlightProps', props);
     toggleHighlight(this);
   };
 
-  ns.components.ArrayItem.prototype.unhighlight = function() {
+  ns.components.TextBox.prototype.unhighlight = function() {
     this.state('highlight', false);
     toggleHighlight(this);
     this.state('highlightProps', null);
   };
 
-  ns.components.ArrayItem.prototype.translate = function(x, y, animate) {
+  ns.components.TextBox.prototype.translate = function(x, y, animate) {
     var that = this;
     return new Promise(function(resolve, reject) {
       // animate by default
@@ -168,7 +172,7 @@
     });
   };
 
-  ns.components.ArrayItem.prototype.moveTo = function(x, y, animate) {
+  ns.components.TextBox.prototype.moveTo = function(x, y, animate) {
     var that = this;
     return new Promise(function(resolve, reject) {
       // animate by default
@@ -189,7 +193,7 @@
     });
   };
 
-  ns.components.ArrayItem.prototype.moveThroughPath = function(path) {
+  ns.components.TextBox.prototype.moveThroughPath = function(path) {
 
     var animTasks = [];
 

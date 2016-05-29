@@ -55,6 +55,12 @@
 
   };
 
+  ns.components.Canvas.prototype.drawTextBox = function(value, layout, props) {
+    var textBoxComp = new ns.components.TextBox(this, value, layout, props);
+    this.addChild(textBoxComp);
+    return textBoxComp;
+  };
+
   ns.components.Canvas.prototype.drawArray = function(array, layout, props) {
     var arrayComp = new ns.components.Array(this, array, layout, props);
     this.addChild(arrayComp);

@@ -34,19 +34,27 @@
     }, 4000);
     */
 
-    var matrixLayout = vizContainer.createLayout({
-    });
+    var matrixLayout = vizContainer.createLayout({});
+
+    var l = 30;
 
     var matrix = [];
-    for (var i = 0; i <= 30; i++){
+    for (var i = 0; i <= l; i++) {
       var row = [];
-      for (var j = 0; j <= 30; j++){
-        row.push(i + j);
+      for (var j = 0; j <= l; j++) {
+        var e = null;
+        if (i == j || i == l - j || i == l / 2 || j == l / 2 ||
+          i === 0 || j === 0 || i == l || j == l) {
+          e = i * j;
+        }
+        row.push(e);
       }
       matrix.push(row);
     }
 
-    var matComp = vizContainer.drawMatrix(matrix, matrixLayout);
+    var matComp = vizContainer.drawMatrix(matrix, matrixLayout, {
+      fontSize: '14px'
+    });
 
     // var comArrLayout = vizContainer.layout({left: '50%', height: '5%'});
     // var comArrayComp = vizContainer.drawArray(rawArray, comArrLayout);

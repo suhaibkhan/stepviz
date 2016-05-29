@@ -19,7 +19,7 @@
     var array = component.value();
 
     var props = {};
-    ns.constants.ARRAYITEM_PROP_LIST.forEach(function(propKey) {
+    ns.constants.TEXTBOX_PROP_LIST.forEach(function(propKey) {
       props[propKey] = component.state(propKey);
     });
 
@@ -61,7 +61,7 @@
           childProps.highlightProps = component.state('highlight')[i];
         }
         var itemLayout = component.createLayout(itemBox);
-        component.drawArrayItem(array[i], itemLayout, childProps);
+        component.drawTextBox(array[i], itemLayout, childProps);
       }
     }
 
@@ -110,10 +110,10 @@
   // inherit from base class
   ns.util.inherits(ns.components.Component, ns.components.Array);
 
-  ns.components.Array.prototype.drawArrayItem = function(value, layout, props) {
-    var arrayItemComp = new ns.components.ArrayItem(this, value, layout, props);
-    this.addChild(arrayItemComp);
-    return arrayItemComp;
+  ns.components.Array.prototype.drawTextBox = function(value, layout, props) {
+    var textBoxComp = new ns.components.TextBox(this, value, layout, props);
+    this.addChild(textBoxComp);
+    return textBoxComp;
   };
 
   ns.components.Array.prototype.redraw = function() {
