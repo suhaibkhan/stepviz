@@ -15,16 +15,7 @@
       throw 'Empty matrix';
     }
 
-    ns.components.Component.call(this, parent, matrix, layout, props, {
-      fontSize: ns.config.defaultFontSize,
-      renderer: function(d) {
-        if (d === null) {
-          return '';
-        } else {
-          return JSON.stringify(d);
-        }
-      }
-    });
+    ns.components.Component.call(this, parent, matrix, layout, props, {});
 
     var compBox = layout.getBox();
 
@@ -53,7 +44,9 @@
 
     var props = {};
     ns.constants.ARRAY_PROP_LIST.forEach(function(propKey) {
-      props[propKey] = component.state(propKey);
+      if (component.state(propKey)){
+        props[propKey] = component.state(propKey);
+      }
     });
 
     var rowWidth = compBox.width;
@@ -93,6 +86,15 @@
     var arrayComp = new ns.components.Array(this, array, layout, props);
     this.addChild(arrayComp);
     return arrayComp;
+  };
+
+  ns.components.Matrix.prototype.changeValue = function(row, column, newValue){
+    if (this.child(row)){
+      this.child(row).changeValue(column, newValue);
+      this.value()[row][column] = newValue;
+    }else{
+      throw 'Invalid row';
+    }
   };
 
 }(window.stepViz, window.d3));

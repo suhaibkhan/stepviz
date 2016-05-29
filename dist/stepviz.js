@@ -1,5 +1,5 @@
 /*!
- * stepviz 0.1.0 (29-05-2016)
+ * stepviz 0.1.0 (30-05-2016)
  * https://github.com/suhaibkhan/stepviz
  * MIT licensed
 
@@ -81,6 +81,10 @@
 
   ns.init = function(container, props) {
     return new ns.components.Canvas(container, props);
+  };
+
+  ns.initStepExecutor = function(){
+    return new ns.StepExecutor();
   };
 
 }(window.stepViz));
@@ -201,6 +205,54 @@
   ns.Layout.prototype.clone = function() {
     return new ns.Layout(this._parent, ns.util.objClone(this._box),
       ns.util.objClone(this._margin));
+  };
+
+}(window.stepViz));
+
+
+(function(ns) {
+
+  'use strict';
+
+  ns.StepExecutor = function() {
+    this._currentStepIndex = -1;
+    this._steps = [];
+  };
+
+  ns.StepExecutor.prototype.add = function(stepFn, clearFn, noOfTimes){
+    noOfTimes = noOfTimes || 1;
+    stepFn = stepFn || function(){};
+    clearFn = clearFn || function(){};
+    if (typeof stepFn != 'function' || typeof clearFn != 'function'){
+      throw Error('Invalid argument');
+    }
+    for (var i = 0; i < noOfTimes; i++){
+      this._steps.push({forward: stepFn, backward: clearFn});
+    }
+  };
+
+  ns.StepExecutor.prototype.hasNext = function(){
+    return (this._currentStepIndex + 1 < this._steps.length);
+  };
+
+  ns.StepExecutor.prototype.hasBack = function(){
+    return (this._currentStepIndex >= 0);
+  };
+
+  ns.StepExecutor.prototype.next = function(context){
+    if (this._currentStepIndex + 1 >= this._steps.length ){
+      throw Error('No forward steps');
+    }
+    this._currentStepIndex++;
+    this._steps[this._currentStepIndex].forward.call(context);
+  };
+
+  ns.StepExecutor.prototype.back = function(context){
+    if (this._currentStepIndex < 0){
+      throw Error('No backward steps');
+    }
+    this._steps[this._currentStepIndex].backward.call(context);
+    this._currentStepIndex--;
   };
 
 }(window.stepViz));
@@ -470,7 +522,9 @@
 
     var props = {};
     ns.constants.TEXTBOX_PROP_LIST.forEach(function(propKey) {
-      props[propKey] = component.state(propKey);
+      if (component.state(propKey)) {
+        props[propKey] = component.state(propKey);
+      }
     });
 
     var itemSize = 0;
@@ -528,15 +582,7 @@
     }
 
     ns.components.Component.call(this, parent, array, layout, props, {
-      dir: ns.constants.ARRAY_HORZ_DIR,
-      fontSize: ns.config.defaultFontSize,
-      renderer: function(d) {
-        if (d === null) {
-          return '';
-        } else {
-          return JSON.stringify(d);
-        }
-      }
+      dir: ns.constants.ARRAY_HORZ_DIR
     });
 
     var compBox = layout.getBox();
@@ -639,6 +685,15 @@
         resolve();
       }
     });
+  };
+
+  ns.components.Array.prototype.changeValue = function(index, newValue) {
+    if (this.child(index)){
+      this.child(index).changeValue(newValue);
+      this.value()[index] = newValue;
+    }else{
+      throw 'Invalid index';
+    }
   };
 
   ns.components.Array.prototype.clone = function() {
@@ -763,16 +818,7 @@
       throw 'Empty matrix';
     }
 
-    ns.components.Component.call(this, parent, matrix, layout, props, {
-      fontSize: ns.config.defaultFontSize,
-      renderer: function(d) {
-        if (d === null) {
-          return '';
-        } else {
-          return JSON.stringify(d);
-        }
-      }
-    });
+    ns.components.Component.call(this, parent, matrix, layout, props, {});
 
     var compBox = layout.getBox();
 
@@ -801,7 +847,9 @@
 
     var props = {};
     ns.constants.ARRAY_PROP_LIST.forEach(function(propKey) {
-      props[propKey] = component.state(propKey);
+      if (component.state(propKey)){
+        props[propKey] = component.state(propKey);
+      }
     });
 
     var rowWidth = compBox.width;
@@ -843,6 +891,15 @@
     return arrayComp;
   };
 
+  ns.components.Matrix.prototype.changeValue = function(row, column, newValue){
+    if (this.child(row)){
+      this.child(row).changeValue(column, newValue);
+      this.value()[row][column] = newValue;
+    }else{
+      throw 'Invalid row';
+    }
+  };
+
 }(window.stepViz, window.d3));
 
 (function(ns, d3) {
@@ -874,11 +931,10 @@
     var textElem = svgElem.select('text');
     if (textElem.empty()) {
       textElem = svgElem.append('text')
-        .text(renderer(value))
         .attr('x', 0)
-        .attr('y', 0)
-        .style('font-size', fontSize);
+        .attr('y', 0);
     }
+    textElem.text(renderer(value)).style('font-size', fontSize);
 
     // align text in center of rect
     var rectBBox = rectElem.node().getBBox();
@@ -939,6 +995,8 @@
       renderer: function(d) {
         if (d === null) {
           return '';
+        } else if (typeof d == 'string' || typeof d == 'number'){
+          return d;
         } else {
           return JSON.stringify(d);
         }

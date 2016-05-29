@@ -27,11 +27,10 @@
     var textElem = svgElem.select('text');
     if (textElem.empty()) {
       textElem = svgElem.append('text')
-        .text(renderer(value))
         .attr('x', 0)
-        .attr('y', 0)
-        .style('font-size', fontSize);
+        .attr('y', 0);
     }
+    textElem.text(renderer(value)).style('font-size', fontSize);
 
     // align text in center of rect
     var rectBBox = rectElem.node().getBBox();
@@ -92,6 +91,8 @@
       renderer: function(d) {
         if (d === null) {
           return '';
+        } else if (typeof d == 'string' || typeof d == 'number'){
+          return d;
         } else {
           return JSON.stringify(d);
         }

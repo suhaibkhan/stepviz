@@ -20,7 +20,9 @@
 
     var props = {};
     ns.constants.TEXTBOX_PROP_LIST.forEach(function(propKey) {
-      props[propKey] = component.state(propKey);
+      if (component.state(propKey)) {
+        props[propKey] = component.state(propKey);
+      }
     });
 
     var itemSize = 0;
@@ -78,15 +80,7 @@
     }
 
     ns.components.Component.call(this, parent, array, layout, props, {
-      dir: ns.constants.ARRAY_HORZ_DIR,
-      fontSize: ns.config.defaultFontSize,
-      renderer: function(d) {
-        if (d === null) {
-          return '';
-        } else {
-          return JSON.stringify(d);
-        }
-      }
+      dir: ns.constants.ARRAY_HORZ_DIR
     });
 
     var compBox = layout.getBox();
@@ -189,6 +183,15 @@
         resolve();
       }
     });
+  };
+
+  ns.components.Array.prototype.changeValue = function(index, newValue) {
+    if (this.child(index)){
+      this.child(index).changeValue(newValue);
+      this.value()[index] = newValue;
+    }else{
+      throw 'Invalid index';
+    }
   };
 
   ns.components.Array.prototype.clone = function() {
