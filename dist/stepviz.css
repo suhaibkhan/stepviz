@@ -12,8 +12,7 @@
     stroke: #000;
     stroke-width: 1px; }
   .stepViz .textBox text {
-    color: #000;
-    alignment-baseline: before-edge; }
+    color: #000; }
   .stepViz .textBox.highlight rect {
     fill: #ccc; }
   .stepViz .textBox.borderless rect {

@@ -941,7 +941,7 @@
     var textBBox = textElem.node().getBBox();
 
     textElem.attr('dx', (rectBBox.width - textBBox.width) / 2)
-      .attr('dy', (rectBBox.height - textBBox.height) / 2);
+      .attr('dy', ((rectBBox.height - textBBox.height) / 2) + (0.75 * textBBox.height));
 
     // highlight
     toggleHighlight(component);
